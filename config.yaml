@@ -17,6 +17,7 @@ protein:
 docking:
   exhaustiveness: 8
   num_modes: 9
+  # energy_range: reserved for engines that expose it; Vina Python API docking() uses defaults here.
   energy_range: 3
   # AutoDock Vina (Python API) is CPU-only; this flag is reserved for future GPU backends.
   gpu: true
