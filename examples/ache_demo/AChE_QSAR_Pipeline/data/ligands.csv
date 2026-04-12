@@ -1,0 +1,26 @@
+name,cas,smiles,type,binding_energy_kcal_mol
+Dichlorvos,62-73-7,COP(=O)(OC)/C(Cl)=C/Cl,Pesticide,-7.2
+Malathion,121-75-5,CCOC(=O)CC(SP(=S)(OC)OC)C(=O)OCC,Pesticide,-6.8
+Chlorpyrifos,2921-88-2,CCOP(=S)(OCC)Oc1c(Cl)cc(Cl)nc1Cl,Pesticide,-7.5
+Paraoxon-methyl,950-35-6,COP(=O)(OC)Oc1ccc([N+](=O)[O-])cc1,Pesticide,-8.1
+Parathion,56-38-2,CCOP(=S)(OCC)Oc1ccc([N+](=O)[O-])cc1,Pesticide,-7.9
+Diazinon,333-41-5,CCOP(=S)(OCC)Sc1cc(C)nc(SC)n1,Pesticide,-7.3
+Dimethoate,60-51-5,COP(=S)(OC)SCC(=O)NC,Pesticide,-6.5
+Acephate,30560-19-1,CCOP(=O)(NC)C(=O)SC,Pesticide,-6.2
+Methamidophos,10265-92-6,COP(=O)(NC)SC,Pesticide,-6.9
+Phosmet,732-11-6,COP(=S)(OC)SCN1C(=O)c2ccccc2C1=O,Pesticide,-7.1
+Chlorfenvinphos,470-90-6,CCOP(=O)(OCC)OCC(Cl)=CCl,Pesticide,-7.6
+Profenofos,41198-08-7,CCCSP(=O)(OCC)Oc1c(Cl)ccc(Cl)c1Br,Pesticide,-7.4
+Triethyl phosphate,78-40-0,CCOP(=O)(OCC)OCC,Flame_Retardant,-5.2
+Tributyl phosphate,126-73-8,CCCCOP(=O)(OCCCC)OCCCC,Flame_Retardant,-5.8
+Triphenyl phosphate,115-86-6,c1ccc(OP(=O)(Oc2ccccc2)Oc2ccccc2)cc1,Flame_Retardant,-6.1
+TCEP,115-96-8,ClCCOP(=O)(OCCCl)OCCCl,Flame_Retardant,-4.9
+TCPP,13674-84-5,CC(CCl)OP(=O)(OC(C)CCl)OC(C)CCl,Flame_Retardant,-5.0
+TOCP,78-30-8,Cc1ccccc1OP(=O)(Oc1ccccc1C)Oc1ccccc1C,Flame_Retardant,-6.3
+EHDPP,1241-94-7,CCCCC(CC)COP(=O)(OCCCCCC)Oc1ccccc1,Flame_Retardant,-5.5
+"Tris(2,3-dibromopropyl) phosphate",126-72-7,BrCC(CBr)COP(=O)(OCC(CBr)CBr)OCC(CBr)CBr,Flame_Retardant,-5.7
+DOPO,35948-25-5,O=P1OC2=CC=CC=C2C3=CC=CC=C13,Flame_Retardant,-5.4
+DPO,4559-70-0,O=P1(O)Oc2ccccc2-c2ccccc21,Flame_Retardant,-5.1
+DOPO-HQ,99208-50-1,Oc1ccc(O)cc1P1(=O)Oc2ccccc2-c2ccccc21,Flame_Retardant,-5.6
+DOPO-HCA,35948-25-5,O=P1OC2=CC=CC=C2C3=CC=CC=C13,Flame_Retardant,-5.4
+GPTMS,2530-83-8,CO[Si](CCCOC1CO1)(OC)OC,Organosilane,-4.5

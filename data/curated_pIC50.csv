@@ -1,0 +1,7 @@
+name,cas,ic50_nM,pIC50,source
+Paraoxon-methyl,950-35-6,10.0,8.0,BindingDB (human AChE) (manual table)
+Chlorpyrifos,2921-88-2,11.0,7.958607314841775,Mortensen 1998 (manual table)
+Dichlorvos,62-73-7,20.4,7.690369832574101,SLAS Discovery (manual table)
+Profenofos,41198-08-7,350.0,6.455931955649724,Das 2006 (manual table)
+Acephate,30560-19-1,4000.0,5.3979400086720375,Das 2006 (manual table)
+Triphenyl phosphate,115-86-6,220000.0,3.6575773191777934,MDPI 2024 (manual table)
