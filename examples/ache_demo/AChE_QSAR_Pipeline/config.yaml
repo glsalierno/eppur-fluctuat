@@ -1,0 +1,53 @@
+# AChE QSAR pipeline — paths relative to this file’s directory unless absolute.
+
+qsar:
+  # Primary descriptor: Vina binding energy only (avoid overfitting on tiny data).
+  use_descriptors:
+    - binding_energy_kcal_mol
+  # If true, also include covalent_factor when n_train >= second_descriptor_min_n
+  allow_second_descriptor: true
+  second_descriptor_min_n: 10
+  # Leave-one-out on training compounds (after test holdout).
+  use_loo: true
+  # Hold-out test names (must match names in ligands / predictions). Optional.
+  test_set_compounds:
+    - Triphenyl phosphate
+    - TCEP
+  # Split training into covalent vs non-covalent univariate regressions (binding energy only).
+  split_covalent_models: true
+  covalent_group:
+    - Paraoxon-methyl
+    - Dichlorvos
+    - Chlorpyrifos
+    - Profenofos
+  # If pooled LOO R² < threshold, skip regression and use binding-energy ranking only.
+  fallback_to_ranking: true
+  fallback_loo_r2_threshold: 0.2
+  min_train_samples: 3
+  random_seed: 42
+
+descriptors:
+  include_2d: true
+  include_covalent: true
+  include_bioactivation: true
+  include_interaction_be_cov: true
+
+data:
+  experimental_source: "manual"
+  docking_results: "../screening_output/docking_results.csv"
+  pose_glob: "../screening_output/docked/*_best.pdbqt"
+
+paths:
+  ligands: "data/ligands.csv"
+  experimental_manual: "data/experimental_manual.csv"
+  computed_features: "data/computed_features.csv"
+  experimental_merged: "data/experimental_data.csv"
+  curated_pIC50: "data/curated_pIC50.csv"
+  predictions: "outputs/predictions.csv"
+  model_dir: "outputs"
+  report_html: "outputs/qsar_report.html"
+  plot_scatter: "outputs/model_performance.png"
+  plot_importance: "outputs/feature_importance.png"
+  loo_table: "outputs/loo_predictions.csv"
+
+chembl_target: "CHEMBL220"

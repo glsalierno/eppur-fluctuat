@@ -1,0 +1,7 @@
+name,ic50_nM,source,notes,cas,pIC50
+Paraoxon-methyl,10.0,BindingDB (human AChE) (manual table),Paraoxon class,950-35-6,8.0
+Chlorpyrifos,11.0,Mortensen 1998 (manual table),Chlorpyrifos-oxon literature range 7–15 nM; mid used for parent mapping,2921-88-2,7.958607314841775
+Dichlorvos,20.4,SLAS Discovery (manual table),Reported ±1 nM in prompt,62-73-7,7.690369832574101
+Profenofos,350.0,Das 2006 (manual table),,41198-08-7,6.455931955649724
+Acephate,4000.0,Das 2006 (manual table),,30560-19-1,5.3979400086720375
+Triphenyl phosphate,220000.0,MDPI 2024 (manual table),Cell-based assay in prompt,115-86-6,3.6575773191777934

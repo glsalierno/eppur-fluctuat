@@ -1,0 +1,22 @@
+# conda env create -f environment.yml && conda activate eppur-fluctuat
+name: eppur-fluctuat
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.10
+  - pip
+  - numpy
+  - scipy
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - rdkit
+  - pyyaml
+  - biopython
+  - openbabel
+  - openmm
+  - pip:
+    - vina
+    - py3dmol
+    - joblib

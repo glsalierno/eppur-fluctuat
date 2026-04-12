@@ -1,0 +1,14 @@
+# Core pipeline (install Open Babel separately: conda install -c conda-forge openbabel)
+vina
+rdkit-pypi
+pandas
+numpy
+scipy
+scikit-learn
+joblib
+pyyaml
+matplotlib
+seaborn
+py3dmol
+biopython
+openmm

@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+.env
+.env.*
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Runtime outputs (regenerated locally)
+outputs/*
+!outputs/.gitkeep
+model.joblib
+**/outputs/model.joblib
+
+# Logs
+*.log
+
+# Large local screening trees (legacy / optional)
+screening_output/
+screening_output*/
+
+# Legacy project files kept locally (not part of core package)
+nylon_solubility/
+inputs/
+report/
+__pycache__/
+.venv/
+/ligands.csv
+screen_alkyl_phosphates.py
+interaction_analysis.py
+mechanism_data.py
+unified_ache_report.py
+detailed_report.py
+run_hybrid_simulation.py
+setup_env.sh
+test_gpu.py
+simulation.log
+requirements_screening.txt
+config.yaml.bak

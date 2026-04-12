@@ -1,0 +1,30 @@
+{
+  "feature_columns": [
+    "binding_energy_kcal_mol"
+  ],
+  "n_train": 5,
+  "n_test": 1,
+  "test_compounds": [
+    "TCEP",
+    "Triphenyl phosphate"
+  ],
+  "split_covalent": false,
+  "loo_r2": 0.2660936708088577,
+  "loo_rmse": 0.8742849652309432,
+  "test_r2": NaN,
+  "test_rmse": 1.8099166307345742,
+  "test_predictions": [
+    {
+      "name": "Triphenyl phosphate",
+      "pIC50_exp": 3.6575773191777934,
+      "pIC50_pred": 5.467493949912368
+    }
+  ],
+  "fallback_ranking": false,
+  "fallback_reason": null,
+  "selected_model": "univariate OLS (LOO validation)",
+  "ols_coefficients": {
+    "binding_energy_kcal_mol": -1.383962603758611
+  },
+  "ols_intercept": -2.974677933015159
+}
