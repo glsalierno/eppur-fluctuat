@@ -1,0 +1,29 @@
+site_name: eppur-fluctuat
+site_description: Docking (AutoDock Vina) + small-data QSAR with ranking fallback.
+repo_url: https://github.com/glsalierno/eppur-fluctuat
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Usage: usage.md
+  - Fallback mechanism: fallback_mechanism.md
+  - API reference: api.md
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition

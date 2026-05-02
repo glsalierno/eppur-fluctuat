@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # AutoDock Vina: docking is mocked in tests; the Python ``vina`` wheel is installed via pip.
+      # System binary ``vina`` is optional for this CI job.
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Pytest with coverage
+        env:
+          PYTHONPATH: scripts
+        run: pytest tests/ --cov=scripts --cov=eppur_fluctuat --cov-report=xml --cov-report=term-missing
+
+      - name: Vulture
+        run: vulture --min-confidence=80 --exclude="tests/,validation/,venv/,.venv/,examples/,nylon_solubility/" . vulture_whitelist.py
+
+      - name: Ruff
+        run: ruff check scripts eppur_fluctuat tests interaction_analysis.py validation/benchmark_ache.py
+
+      - name: Black
+        run: black --check scripts eppur_fluctuat tests interaction_analysis.py validation/benchmark_ache.py

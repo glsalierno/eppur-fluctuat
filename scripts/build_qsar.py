@@ -11,7 +11,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import joblib
 import numpy as np
@@ -31,15 +31,54 @@ DESCRIPTOR_ALIASES: Dict[str, str] = {
 
 
 def load_config(cfg_path: Path) -> dict:
+    """
+    Load YAML configuration from disk.
+
+    Parameters
+    ----------
+    cfg_path : pathlib.Path
+        Path to ``config.yaml``.
+
+    Returns
+    -------
+    dict
+        Parsed configuration tree.
+    """
     with open(cfg_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def norm_name(s: str) -> str:
+    """
+    Normalize compound names for merges (strip + collapse internal whitespace).
+
+    Parameters
+    ----------
+    s : str
+        Raw label.
+
+    Returns
+    -------
+    str
+        Normalized name string.
+    """
     return " ".join(str(s).strip().split())
 
 
 def ic50_nm_from_pic50(pic50: float) -> float:
+    """
+    Convert pIC50 to IC50 in nM using the pipeline convention.
+
+    Parameters
+    ----------
+    pic50 : float
+        Negative log10 molar activity.
+
+    Returns
+    -------
+    float
+        IC50 in nanomolar units.
+    """
     return 10.0 ** (9.0 - pic50)
 
 
@@ -52,12 +91,37 @@ def resolve_descriptor_columns(use_descriptors: List[str]) -> List[str]:
 
 
 def ensure_computed_features(cfg: dict, base: Path, paths: dict) -> Path:
-    """Build computed_features.csv from docking_results + ligands if missing."""
-    out_path = base / paths.get("computed_features", "outputs/computed_features.csv")
+    """
+    Build ``computed_features.csv`` from docking + ligand tables if absent.
+
+    Parameters
+    ----------
+    cfg : dict
+        Full configuration (used only indirectly via paths).
+    base : pathlib.Path
+        Project root.
+    paths : dict
+        ``paths`` section mapping logical names to relative paths.
+
+    Returns
+    -------
+    pathlib.Path
+        Path to ``computed_features.csv``.
+
+    Raises
+    ------
+    SystemExit
+        If required inputs are missing or docking lacks ``affinity_kcal_mol``.
+    """
+    out_path = base / paths.get(
+        "computed_features", "workspace/outputs/computed_features.csv"
+    )
     if out_path.is_file():
         return out_path
-    dock_path = base / paths.get("docking_results", "outputs/docking_results.csv")
-    lig_path = base / paths.get("ligands", "data/ligands.csv")
+    dock_path = base / paths.get(
+        "docking_results", "workspace/outputs/docking_results.csv"
+    )
+    lig_path = base / paths.get("ligands", "workspace/inputs/ligands.csv")
     if not dock_path.is_file() or not lig_path.is_file():
         raise SystemExit(
             f"Missing computed features and could not build: need {dock_path} and {lig_path}. "
@@ -76,7 +140,9 @@ def ensure_computed_features(cfg: dict, base: Path, paths: dict) -> Path:
         raise SystemExit("docking_results.csv must contain affinity_kcal_mol")
     m["binding_energy_kcal_mol"] = m["affinity_kcal_mol"]
     if "covalent_proximity_distance" in m.columns:
-        m["covalent_factor"] = (pd.to_numeric(m["covalent_proximity_distance"], errors="coerce") < 3.5).astype(int)
+        m["covalent_factor"] = (
+            pd.to_numeric(m["covalent_proximity_distance"], errors="coerce") < 3.5
+        ).astype(int)
     elif "covalent_factor" not in m.columns:
         m["covalent_factor"] = 0
     keep = ["name", "smiles", "binding_energy_kcal_mol", "covalent_factor"]
@@ -149,9 +215,58 @@ def ranking_column_for_qsar(feat_cols: List[str]) -> str:
     return feat_cols[0]
 
 
+def should_use_ranking_fallback(
+    loo_r2: Optional[float],
+    *,
+    fallback_enabled: bool,
+    fallback_threshold: float,
+) -> bool:
+    """
+    Decide whether to use binding-energy ranking instead of OLS predictions.
+
+    Mirrors the logic used after leave-one-out scoring in :func:`main`.
+
+    Parameters
+    ----------
+    loo_r2 : float or None
+        Pooled leave-one-out R² on the training set (may be NaN).
+    fallback_enabled : bool
+        ``qsar.fallback_to_ranking`` from configuration.
+    fallback_threshold : float
+        ``qsar.fallback_loo_r2_threshold``.
+
+    Returns
+    -------
+    bool
+        True if ranking fallback should replace OLS predictions.
+    """
+    if not fallback_enabled:
+        return False
+    if loo_r2 is None:
+        return False
+    try:
+        if np.isnan(float(loo_r2)):
+            return False
+    except (TypeError, ValueError):
+        return False
+    return float(loo_r2) < float(fallback_threshold)
+
+
 def main() -> None:
+    """
+    CLI entry: fit / validate small-data QSAR and write predictions plus metrics.
+
+    Raises
+    ------
+    SystemExit
+        On missing inputs, insufficient training compounds, or missing descriptor columns.
+    """
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", type=Path, default=Path(__file__).resolve().parent.parent / "config.yaml")
+    ap.add_argument(
+        "--config",
+        type=Path,
+        default=Path(__file__).resolve().parent.parent / "config.yaml",
+    )
     args = ap.parse_args()
     cfg = load_config(args.config)
     qsar = cfg.get("qsar", {})
@@ -159,19 +274,21 @@ def main() -> None:
     paths = cfg.get("paths", {})
 
     feat_path = ensure_computed_features(cfg, base, paths)
-    pic_path = base / paths.get("curated_pIC50", "data/curated_pIC50.csv")
-    out_dir = base / paths.get("model_dir", "outputs")
+    pic_path = base / paths.get("curated_pIC50", "workspace/inputs/curated_pIC50.csv")
+    out_dir = base / paths.get("model_dir", "workspace/outputs")
     out_dir.mkdir(parents=True, exist_ok=True)
-    pred_path = base / paths.get("predictions", "outputs/predictions.csv")
+    pred_path = base / paths.get("predictions", "workspace/outputs/predictions.csv")
     metrics_path = out_dir / "metrics.json"
-    loo_path = base / paths.get("loo_table", "outputs/loo_predictions.csv")
+    loo_path = base / paths.get("loo_table", "workspace/outputs/loo_predictions.csv")
 
     feats = pd.read_csv(feat_path)
     exp = pd.read_csv(pic_path)
     exp = exp.dropna(subset=["pIC50", "name"])
     exp["name"] = exp["name"].map(norm_name)
     pic_map = exp.set_index("name")["pIC50"].to_dict()
-    ic50_map = exp.set_index("name")["ic50_nM"].to_dict() if "ic50_nM" in exp.columns else {}
+    ic50_map = (
+        exp.set_index("name")["ic50_nM"].to_dict() if "ic50_nM" in exp.columns else {}
+    )
 
     merged = feats.copy()
     merged["name"] = merged["name"].map(norm_name)
@@ -179,18 +296,28 @@ def main() -> None:
     merged["ic50_nM_exp"] = merged["name"].map(ic50_map) if ic50_map else np.nan
     merged["has_experimental"] = merged["pIC50_exp"].notna()
 
-    test_names: Set[str] = {norm_name(x) for x in (qsar.get("test_set_compounds") or [])}
-    covalent_names: Set[str] = {norm_name(x) for x in (qsar.get("covalent_group") or [])}
+    test_names: Set[str] = {
+        norm_name(x) for x in (qsar.get("test_set_compounds") or [])
+    }
+    covalent_names: Set[str] = {
+        norm_name(x) for x in (qsar.get("covalent_group") or [])
+    }
 
     logical = list(qsar.get("use_descriptors") or ["binding_energy"])
     resolved = resolve_descriptor_columns(logical)
 
     n_exp = int(merged["has_experimental"].sum())
     if n_exp < int(qsar.get("min_train_samples", 3)):
-        raise SystemExit(f"Need at least {qsar.get('min_train_samples', 3)} compounds with experimental pIC50.")
+        raise SystemExit(
+            f"Need at least {qsar.get('min_train_samples', 3)} compounds with experimental pIC50."
+        )
 
-    train_df = merged[merged["has_experimental"] & ~merged["name"].isin(test_names)].copy()
-    test_df = merged[merged["has_experimental"] & merged["name"].isin(test_names)].copy()
+    train_df = merged[
+        merged["has_experimental"] & ~merged["name"].isin(test_names)
+    ].copy()
+    test_df = merged[
+        merged["has_experimental"] & merged["name"].isin(test_names)
+    ].copy()
     train_df = train_df.reset_index(drop=True)
 
     if len(train_df) < 2 and len(test_df) > 0:
@@ -202,7 +329,9 @@ def main() -> None:
     feat_cols: List[str] = []
     for c in resolved:
         if c not in merged.columns:
-            raise SystemExit(f"Descriptor column '{c}' not in computed features ({feat_path}).")
+            raise SystemExit(
+                f"Descriptor column '{c}' not in computed features ({feat_path})."
+            )
         feat_cols.append(c)
     if not feat_cols:
         feat_cols = ["binding_energy_kcal_mol"]
@@ -218,8 +347,12 @@ def main() -> None:
     rank_col = ranking_column_for_qsar(feat_cols)
 
     for c in feat_cols:
-        merged[c] = merged[c].replace([np.inf, -np.inf], np.nan).fillna(merged[c].median())
-        train_df[c] = train_df[c].replace([np.inf, -np.inf], np.nan).fillna(train_df[c].median())
+        merged[c] = (
+            merged[c].replace([np.inf, -np.inf], np.nan).fillna(merged[c].median())
+        )
+        train_df[c] = (
+            train_df[c].replace([np.inf, -np.inf], np.nan).fillna(train_df[c].median())
+        )
 
     X_train = train_df[feat_cols].values.astype(float)
     y_train = train_df["pIC50_exp"].values.astype(float)
@@ -276,7 +409,12 @@ def main() -> None:
             pack[key] = {"model": lr_f, "n": len(sub_df)}
             metrics[f"{key}_loo_n"] = len(sub_df)
         ym = float(y_train.mean())
-        pred_loo = np.array([loo_by_name.get(str(train_df.iloc[j]["name"]), ym) for j in range(len(train_df))])
+        pred_loo = np.array(
+            [
+                loo_by_name.get(str(train_df.iloc[j]["name"]), ym)
+                for j in range(len(train_df))
+            ]
+        )
         y_loo_all = pred_loo.tolist()
         y_true_all = y_train.tolist()
         if len(y_true_all) >= 2:
@@ -294,12 +432,22 @@ def main() -> None:
         metrics["loo_rmse"] = float(np.sqrt(mean_squared_error(y_true_all, y_loo_all)))
 
         pack["covalent"] = (
-            {"model": fit_lr(cov_df[feat_cols].values.astype(float), cov_df["pIC50_exp"].values), "n": len(cov_df)}
+            {
+                "model": fit_lr(
+                    cov_df[feat_cols].values.astype(float), cov_df["pIC50_exp"].values
+                ),
+                "n": len(cov_df),
+            }
             if len(cov_df) >= 2
             else None
         )
         pack["non_covalent"] = (
-            {"model": fit_lr(non_df[feat_cols].values.astype(float), non_df["pIC50_exp"].values), "n": len(non_df)}
+            {
+                "model": fit_lr(
+                    non_df[feat_cols].values.astype(float), non_df["pIC50_exp"].values
+                ),
+                "n": len(non_df),
+            }
             if len(non_df) >= 2
             else None
         )
@@ -331,7 +479,9 @@ def main() -> None:
     pd.DataFrame(loo_rows).to_csv(loo_path, index=False)
     print("\n=== Leave-one-out (training set) ===\n")
     print(pd.DataFrame(loo_rows).to_string(index=False))
-    print(f"\nPooled LOO R² = {metrics.get('loo_r2', float('nan')):.4f}  LOO RMSE = {metrics.get('loo_rmse', float('nan')):.4f}\n")
+    lr = metrics.get("loo_r2", float("nan"))
+    lm = metrics.get("loo_rmse", float("nan"))
+    print(f"\nPooled LOO R² = {lr:.4f}  LOO RMSE = {lm:.4f}\n")
 
     metrics["test_r2"] = None
     metrics["test_rmse"] = None
@@ -343,7 +493,11 @@ def main() -> None:
             for _, row in test_df.iterrows():
                 nm = row["name"]
                 Xr = row[feat_cols].values.astype(float).reshape(1, -1)
-                if nm in covalent_names and pack.get("covalent") and pack["covalent"].get("model"):
+                if (
+                    nm in covalent_names
+                    and pack.get("covalent")
+                    and pack["covalent"].get("model")
+                ):
                     y_hat.append(float(pack["covalent"]["model"].predict(Xr)[0]))
                 elif pack.get("non_covalent") and pack["non_covalent"].get("model"):
                     y_hat.append(float(pack["non_covalent"]["model"].predict(Xr)[0]))
@@ -354,26 +508,40 @@ def main() -> None:
             y_hat = np.array(y_hat)
         else:
             y_hat = pack["global"]["model"].predict(X_te)
-        metrics["test_r2"] = float(r2_score(y_te, y_hat)) if len(y_te) >= 2 else float("nan")
+        metrics["test_r2"] = (
+            float(r2_score(y_te, y_hat)) if len(y_te) >= 2 else float("nan")
+        )
         metrics["test_rmse"] = float(np.sqrt(mean_squared_error(y_te, y_hat)))
         metrics["test_predictions"] = [
-            {"name": test_df.iloc[i]["name"], "pIC50_exp": float(y_te[i]), "pIC50_pred": float(y_hat[i])}
+            {
+                "name": test_df.iloc[i]["name"],
+                "pIC50_exp": float(y_te[i]),
+                "pIC50_pred": float(y_hat[i]),
+            }
             for i in range(len(test_df))
         ]
         print("=== Held-out test set ===\n")
         print(pd.DataFrame(metrics["test_predictions"]).to_string(index=False))
         print(f"\nTest R² = {metrics['test_r2']}  Test RMSE = {metrics['test_rmse']}\n")
 
-    use_fallback = use_fallback_flag and (metrics.get("loo_r2") is not None) and (metrics["loo_r2"] < fallback_thr)
+    use_fallback = should_use_ranking_fallback(
+        metrics.get("loo_r2"),
+        fallback_enabled=use_fallback_flag,
+        fallback_threshold=fallback_thr,
+    )
     metrics["fallback_ranking"] = bool(use_fallback)
     metrics["fallback_reason"] = (
-        f"LOO R² ({metrics.get('loo_r2')}) < threshold {fallback_thr}" if use_fallback else None
+        f"LOO R² ({metrics.get('loo_r2')}) < threshold {fallback_thr}"
+        if use_fallback
+        else None
     )
 
     merged["prediction_source"] = ""
     merged["pIC50_pred"] = np.nan
     merged["IC50_nM_pred"] = np.nan
-    merged["rank_by_binding_energy"] = merged[rank_col].rank(ascending=True, method="min")
+    merged["rank_by_binding_energy"] = merged[rank_col].rank(
+        ascending=True, method="min"
+    )
 
     if use_fallback:
         print(
@@ -387,13 +555,19 @@ def main() -> None:
         metrics["selected_model"] = "OLS (LOO validation)"
         if pack.get("mode") == "single" and pack.get("global"):
             lr_g = pack["global"]["model"]
-            metrics["ols_coefficients"] = {c: float(lr_g.coef_[i]) for i, c in enumerate(feat_cols)}
+            metrics["ols_coefficients"] = {
+                c: float(lr_g.coef_[i]) for i, c in enumerate(feat_cols)
+            }
             metrics["ols_intercept"] = float(lr_g.intercept_)
         for idx, row in merged.iterrows():
             Xr = row[feat_cols].values.astype(float).reshape(1, -1)
             nm = row["name"]
             if pred_fn == "split":
-                if nm in covalent_names and pack.get("covalent") and pack["covalent"].get("model"):
+                if (
+                    nm in covalent_names
+                    and pack.get("covalent")
+                    and pack["covalent"].get("model")
+                ):
                     p = float(pack["covalent"]["model"].predict(Xr)[0])
                     src = "covalent_univariate"
                 elif pack.get("non_covalent") and pack["non_covalent"].get("model"):
@@ -430,7 +604,13 @@ def main() -> None:
             train_df["pIC50_exp"].values,
             xg,
         )
-        plot_payload["line"] = {"a": a, "b": b, "x_grid": xg.tolist(), "y_low": y_lo.tolist(), "y_high": y_hi.tolist()}
+        plot_payload["line"] = {
+            "a": a,
+            "b": b,
+            "x_grid": xg.tolist(),
+            "y_low": y_lo.tolist(),
+            "y_high": y_hi.tolist(),
+        }
     with open(out_dir / "plot_data.json", "w", encoding="utf-8") as f:
         json.dump(plot_payload, f, indent=2)
 

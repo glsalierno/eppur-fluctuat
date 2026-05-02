@@ -1,0 +1,83 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eppur-fluctuat"
+version = "1.0.0"
+description = "Protein–ligand docking (AutoDock Vina) with small-data interpretable QSAR and ranking fallback."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "G. L. Salierno", email = "placeholder@example.com" }]
+keywords = ["docking", "vina", "qsar", "cheminformatics"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+  "vina",
+  "pandas>=1.5.0",
+  "numpy>=1.23.0",
+  "scipy>=1.9.0",
+  "scikit-learn>=1.2.0",
+  "joblib>=1.2.0",
+  "pyyaml>=6.0",
+  "matplotlib>=3.6.0",
+  "biopython>=1.81",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "vulture>=2.11",
+  "black>=23.12.1",
+  "ruff>=0.1.9",
+  "pre-commit>=3.5.0",
+  "mkdocs>=1.5.0",
+  "mkdocs-material>=9.5.0",
+]
+rdkit = ["rdkit-pypi>=2022.9.5"]
+viz = ["py3dmol>=2.0.0", "seaborn>=0.12.0"]
+
+[project.urls]
+Homepage = "https://github.com/glsalierno/eppur-fluctuat"
+Repository = "https://github.com/glsalierno/eppur-fluctuat"
+
+[tool.setuptools.packages.find]
+include = ["eppur_fluctuat*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+extend-exclude = ["examples", "validation"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Scripts prepend ``scripts/`` to ``sys.path`` before importing sibling modules.
+"scripts/prepare_protein.py" = ["E402"]
+"scripts/dock_ligands.py" = ["E402"]
+"scripts/dock_ligands_alchemi.py" = ["E402"]
+"scripts/generate_report.py" = ["E501"]
+
+[tool.black]
+line-length = 120
+target-version = ["py39"]
+
+[tool.coverage.run]
+source = ["scripts", "eppur_fluctuat"]
+omit = ["tests/*", "validation/*", "*/__pycache__/*"]

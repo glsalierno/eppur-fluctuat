@@ -1,0 +1,14 @@
+{
+  "title": "eppur-fluctuat: protein-ligand docking and small-data QSAR",
+  "description": "Hybrid AutoDock Vina docking pipeline with interpretable OLS QSAR, leave-one-out validation, and binding-energy ranking fallback for tiny training sets.",
+  "creators": [
+    {
+      "name": "G. L. Salierno",
+      "affiliation": ""
+    }
+  ],
+  "license": "MIT",
+  "upload_type": "software",
+  "access_right": "open",
+  "keywords": ["docking", "AutoDock Vina", "QSAR", "cheminformatics", "Python"]
+}
