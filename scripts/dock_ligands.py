@@ -11,21 +11,27 @@ Notes
 from __future__ import annotations
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import yaml
 
-try:
-    from Bio.PDB import PDBParser
-except ImportError as exc:  # pragma: no cover
-    raise SystemExit("Install biopython: pip install biopython") from exc
+_SCRIPTS = Path(__file__).resolve().parent
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+
+from docking_common import (
+    load_config,
+    log_path,
+    project_root_from_config,
+    resolve_center,
+    safe_name,
+    smiles_to_pdbqt,
+    vina_cpu_count,
+)
 
 try:
     from vina import Vina
@@ -33,95 +39,85 @@ except ImportError as exc:  # pragma: no cover
     raise SystemExit("Install vina: pip install vina") from exc
 
 
-def load_config(cfg_path: Path) -> dict:
-    with open(cfg_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+def run_docking(
+    vina_engine: Vina,
+    ligand_pdbqt: str,
+    exhaustiveness: int,
+    n_poses: int,
+    out_pose: Path,
+) -> dict:
+    """
+    Run AutoDock Vina docking for one ligand PDBQT using an initialized ``Vina`` instance.
 
+    The receptor and maps must already be configured on ``vina_engine``.
 
-def safe_name(name: str) -> str:
-    import re
+    Parameters
+    ----------
+    vina_engine : vina.Vina
+        Configured Vina object (receptor + maps set).
+    ligand_pdbqt : str
+        Path to ligand PDBQT.
+    exhaustiveness : int
+        Vina exhaustiveness parameter.
+    n_poses : int
+        Number of poses to generate (``num_modes``).
+    out_pose : pathlib.Path
+        Path for the best pose PDBQT output.
 
-    return re.sub(r"[^a-zA-Z0-9_.-]+", "_", name).strip("_")[:80]
+    Returns
+    -------
+    dict
+        Keys: ``affinity`` (float, best-mode score, kcal/mol), ``poses`` (list of pose energy
+        arrays as returned by ``Vina.energies``), ``pose_path`` (str, resolved path to written pose).
 
+    Raises
+    ------
+    RuntimeError
+        If Vina raises during docking (depends on Vina Python binding).
 
-def smiles_to_pdbqt(smiles: str, out_pdbqt: Path) -> None:
-    subprocess.run(
-        ["obabel", f"-:{smiles}", "-O", str(out_pdbqt), "--gen3d", "-p", "7.4"],
-        check=True,
-        capture_output=True,
-        text=True,
+    Examples
+    --------
+    Used internally after ``set_receptor`` and ``compute_vina_maps``::
+
+        result = run_docking(v, str(lig_path), exh, n_poses, out_pose_path)
+        score = result["affinity"]
+    """
+    vina_engine.set_ligand_from_file(ligand_pdbqt)
+    vina_engine.dock(exhaustiveness=exhaustiveness, n_poses=n_poses)
+    energies = vina_engine.energies(n_poses=n_poses)
+    best = (
+        float(np.asarray(energies[0]).flatten()[0]) if len(energies) else float("nan")
     )
-
-
-def ca_centroid_chain(pdb_path: Path, chain_id: str) -> Optional[np.ndarray]:
-    parser = PDBParser(QUIET=True)
-    s = parser.get_structure("p", pdb_path)
-    coords: List[np.ndarray] = []
-    for model in s:
-        for chain in model:
-            if chain.id != chain_id:
-                continue
-            for res in chain:
-                if res.id[0] != " ":
-                    continue
-                if res.get_resname() in ("HOH", "WAT"):
-                    continue
-                if "CA" not in res:
-                    continue
-                a = res["CA"]
-                if a.element and str(a.element).upper() != "H":
-                    coords.append(a.coord)
-    if not coords:
-        return None
-    return np.mean(np.array(coords), axis=0)
-
-
-def reference_ligand_centroid(pdb_path: Path, chain_id: str, resname: str) -> Optional[np.ndarray]:
-    parser = PDBParser(QUIET=True)
-    s = parser.get_structure("p", pdb_path)
-    coords: List[np.ndarray] = []
-    for model in s:
-        for chain in model:
-            if chain.id != chain_id:
-                continue
-            for res in chain:
-                if res.get_resname().strip() != resname.strip():
-                    continue
-                for atom in res:
-                    if atom.element and str(atom.element).upper() != "H":
-                        coords.append(atom.coord)
-    if not coords:
-        return None
-    return np.mean(np.array(coords), axis=0)
-
-
-def resolve_center(cfg: dict, clean_pdb: Path) -> Tuple[float, float, float]:
-    prot = cfg.get("protein", {})
-    pc = prot.get("pocket_center", "auto")
-    chain = str(prot.get("chain", "A"))
-    ref = prot.get("reference_ligand_resname")
-    if isinstance(ref, str) and ref.strip():
-        cen = reference_ligand_centroid(clean_pdb, chain, ref)
-        if cen is None:
-            print(f"WARNING: residue '{ref}' not found; falling back to Cα centroid.", file=sys.stderr)
-        else:
-            return float(cen[0]), float(cen[1]), float(cen[2])
-    if isinstance(pc, (list, tuple)) and len(pc) == 3:
-        return float(pc[0]), float(pc[1]), float(pc[2])
-    if pc == "auto" or pc is None:
-        cen = ca_centroid_chain(clean_pdb, chain)
-        if cen is None:
-            raise RuntimeError(f"Could not compute automatic pocket center for chain {chain}.")
-        return float(cen[0]), float(cen[1]), float(cen[2])
-    raise ValueError("protein.pocket_center must be 'auto', [x,y,z], or set reference_ligand_resname")
+    vina_engine.write_pose(str(out_pose), overwrite=True)
+    return {
+        "affinity": best,
+        "poses": list(energies),
+        "pose_path": str(out_pose.resolve()),
+    }
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Dock ligands with AutoDock Vina using config.yaml")
-    ap.add_argument("--config", type=Path, default=Path(__file__).resolve().parent.parent / "config.yaml")
+    """
+    CLI entry: dock all ligands listed in ``config.yaml`` paths with AutoDock Vina (CPU).
+
+    Raises
+    ------
+    SystemExit
+        On missing inputs, missing ``obabel``, or invalid ligand table columns.
+    ValueError
+        If the ligands CSV lacks required columns.
+    """
+    ap = argparse.ArgumentParser(
+        description="Dock ligands with AutoDock Vina using config.yaml"
+    )
+    ap.add_argument(
+        "--config",
+        type=Path,
+        default=Path(__file__).resolve().parent.parent / "config.yaml",
+    )
     args = ap.parse_args()
     cfg = load_config(args.config)
-    base = args.config.resolve().parent
+    base = project_root_from_config(args.config)
     prot = cfg.get("protein", {})
     dock = cfg.get("docking", {})
     paths = cfg.get("paths", {})
@@ -129,10 +125,14 @@ def main() -> None:
     if shutil.which("obabel") is None:
         raise SystemExit("Open Babel 'obabel' not found in PATH.")
 
-    lig_path = base / paths.get("ligands", "data/ligands.csv")
-    clean_pdb = base / paths.get("receptor_clean", "outputs/receptor_clean.pdb")
-    rec_pdbqt = base / paths.get("receptor_pdbqt", "outputs/receptor.pdbqt")
-    out_csv = base / paths.get("docking_results", "outputs/docking_results.csv")
+    lig_path = base / paths.get("ligands", "workspace/inputs/ligands.csv")
+    clean_pdb = base / paths.get(
+        "receptor_clean", "workspace/outputs/receptor_clean.pdb"
+    )
+    rec_pdbqt = base / paths.get("receptor_pdbqt", "workspace/outputs/receptor.pdbqt")
+    out_csv = base / paths.get(
+        "docking_results", "workspace/outputs/docking_results.csv"
+    )
 
     if not rec_pdbqt.is_file() or not clean_pdb.is_file():
         raise SystemExit(
@@ -150,8 +150,7 @@ def main() -> None:
     exh = int(dock.get("exhaustiveness", 8))
     n_poses = int(dock.get("num_modes", 9))
     seed = int(dock.get("seed", 42))
-    cpu = int(dock.get("cpu", 0) or 0)
-    n_cpu = max(1, (os.cpu_count() or 4) if cpu <= 0 else cpu)
+    n_cpu = vina_cpu_count(cfg)
 
     if dock.get("gpu"):
         print(
@@ -159,15 +158,20 @@ def main() -> None:
             file=sys.stderr,
         )
 
-    print(f"Box center (Å): {center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f}", flush=True)
+    print(
+        f"Box center (Å): {center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f}", flush=True
+    )
     print(f"Box size (Å): {box}", flush=True)
 
     lig_df = pd.read_csv(lig_path)
     if "name" not in lig_df.columns or "smiles" not in lig_df.columns:
         raise ValueError("ligands.csv must have columns: name, smiles")
 
-    dock_dir = base / "outputs" / "docked"
+    dock_dir = base / paths.get("docked_dir", "workspace/outputs/docked")
     dock_dir.mkdir(parents=True, exist_ok=True)
+    log_stub = log_path(cfg, base, "dock_ligands_v1")
+    with open(log_stub, "w", encoding="utf-8") as lf:
+        lf.write(f"seed={seed} center={center} box={box}\n")
 
     v = Vina(sf_name="vina", cpu=n_cpu, seed=seed)
     v.set_receptor(str(rec_pdbqt))
@@ -193,28 +197,27 @@ def main() -> None:
                 }
             )
             continue
-        v.set_ligand_from_file(str(lig_pdbqt))
-        v.dock(exhaustiveness=exh, n_poses=n_poses)
-        energies = v.energies(n_poses=n_poses)
-        best = float(np.asarray(energies[0]).flatten()[0]) if len(energies) else float("nan")
-        v.write_pose(str(out_pose), overwrite=True)
+        dock_out = run_docking(v, str(lig_pdbqt), exh, n_poses, out_pose)
         rows.append(
             {
                 "name": name,
                 "smiles": smi,
-                "affinity_kcal_mol": best,
-                "pose_pdbqt": str(out_pose.resolve()),
+                "affinity_kcal_mol": dock_out["affinity"],
+                "pose_pdbqt": dock_out["pose_path"],
                 "error": "",
             }
         )
 
     df = pd.DataFrame(rows)
-    df = df.sort_values("affinity_kcal_mol", ascending=True, na_position="last").reset_index(drop=True)
+    df = df.sort_values(
+        "affinity_kcal_mol", ascending=True, na_position="last"
+    ).reset_index(drop=True)
     df.insert(0, "rank", range(1, len(df) + 1))
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_csv, index=False)
     print(df[["name", "affinity_kcal_mol", "error"]].to_string(index=False))
     print(f"\nSaved {out_csv}")
+    print(f"Log: {log_stub}")
 
 
 if __name__ == "__main__":

@@ -23,11 +23,39 @@ import yaml
 
 
 def load_config(cfg_path: Path) -> dict:
+    """
+    Load ``config.yaml`` for reporting paths and titles.
+
+    Parameters
+    ----------
+    cfg_path : pathlib.Path
+        Configuration file path.
+
+    Returns
+    -------
+    dict
+        Parsed YAML tree.
+    """
     with open(cfg_path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def _glob_first(pattern: str, search_dir: Path) -> Optional[Path]:
+    """
+    Return the first path matching ``pattern`` under ``search_dir``.
+
+    Parameters
+    ----------
+    pattern : str
+        Glob pattern (may include ``*``).
+    search_dir : pathlib.Path
+        Directory to search.
+
+    Returns
+    -------
+    pathlib.Path or None
+        First sorted match, if any.
+    """
     paths = sorted(glob(str(search_dir / pattern)))
     if not paths:
         return None
@@ -35,6 +63,24 @@ def _glob_first(pattern: str, search_dir: Path) -> Optional[Path]:
 
 
 def pdbqt_to_pdb_text(pdbqt: Path) -> str:
+    """
+    Convert PDBQT to PDB text using Open Babel (temporary file).
+
+    Parameters
+    ----------
+    pdbqt : pathlib.Path
+        Ligand PDBQT path.
+
+    Returns
+    -------
+    str
+        PDB file contents.
+
+    Raises
+    ------
+    subprocess.CalledProcessError
+        If ``obabel`` fails.
+    """
     with tempfile.NamedTemporaryFile(suffix=".pdb", delete=False) as t:
         tmp = Path(t.name)
     try:
@@ -50,8 +96,20 @@ def pdbqt_to_pdb_text(pdbqt: Path) -> str:
 
 
 def main() -> None:
+    """
+    Build matplotlib figures and a standalone HTML QSAR report.
+
+    Raises
+    ------
+    FileNotFoundError
+        If required CSV/JSON inputs are missing (depends on workflow state).
+    """
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", type=Path, default=Path(__file__).resolve().parent.parent / "config.yaml")
+    ap.add_argument(
+        "--config",
+        type=Path,
+        default=Path(__file__).resolve().parent.parent / "config.yaml",
+    )
     args = ap.parse_args()
     cfg = load_config(args.config)
     base = args.config.resolve().parent
@@ -60,14 +118,22 @@ def main() -> None:
     report_title = str(proj.get("report_title", "eppur-fluctuat report"))
     project_name = str(proj.get("name", "eppur-fluctuat"))
 
-    pred_path = base / paths.get("predictions", "outputs/predictions.csv")
-    metrics_path = base / paths.get("model_dir", "outputs") / "metrics.json"
-    plot_data_path = base / paths.get("model_dir", "outputs") / "plot_data.json"
-    out_html = base / paths.get("report_html", "outputs/qsar_report.html")
-    plot_scatter = base / paths.get("plot_scatter", "outputs/model_performance.png")
-    plot_imp = base / paths.get("plot_importance", "outputs/feature_importance.png")
-    plot_be_path = base / paths.get("plot_be_vs_pic50", "outputs/be_vs_pic50.png")
-    pose_glob = paths.get("pose_glob", "outputs/docked/*_best.pdbqt")
+    pred_path = base / paths.get("predictions", "workspace/outputs/predictions.csv")
+    metrics_path = base / paths.get("model_dir", "workspace/outputs") / "metrics.json"
+    plot_data_path = (
+        base / paths.get("model_dir", "workspace/outputs") / "plot_data.json"
+    )
+    out_html = base / paths.get("report_html", "workspace/outputs/qsar_report.html")
+    plot_scatter = base / paths.get(
+        "plot_scatter", "workspace/outputs/model_performance.png"
+    )
+    plot_imp = base / paths.get(
+        "plot_importance", "workspace/outputs/feature_importance.png"
+    )
+    plot_be_path = base / paths.get(
+        "plot_be_vs_pic50", "workspace/outputs/be_vs_pic50.png"
+    )
+    pose_glob = paths.get("pose_glob", "workspace/outputs/docked/*_best.pdbqt")
 
     df = pd.read_csv(pred_path)
     with open(metrics_path, encoding="utf-8") as f:
@@ -80,19 +146,42 @@ def main() -> None:
     rank_label = str(plot_payload.get("rank_column") or "binding_energy_kcal_mol")
 
     loo_rows = plot_payload.get("loo") if plot_payload else None
-    if not loo_rows and (base / paths.get("loo_table", "outputs/loo_predictions.csv")).is_file():
-        loo_df = pd.read_csv(base / paths.get("loo_table", "outputs/loo_predictions.csv"))
+    if (
+        not loo_rows
+        and (
+            base / paths.get("loo_table", "workspace/outputs/loo_predictions.csv")
+        ).is_file()
+    ):
+        loo_df = pd.read_csv(
+            base / paths.get("loo_table", "workspace/outputs/loo_predictions.csv")
+        )
         loo_rows = loo_df.to_dict("records")
 
     fig, ax = plt.subplots(figsize=(5.5, 5))
     if loo_rows:
         ye = [float(r["pIC50_exp"]) for r in loo_rows]
         yp = [float(r["pIC50_loo_pred"]) for r in loo_rows]
-        ax.scatter(ye, yp, s=52, c="#2980b9", edgecolors="k", linewidths=0.4, label="LOO train", zorder=3)
+        ax.scatter(
+            ye,
+            yp,
+            s=52,
+            c="#2980b9",
+            edgecolors="k",
+            linewidths=0.4,
+            label="LOO train",
+            zorder=3,
+        )
         lo = float(min(min(ye), min(yp)))
         hi = float(max(max(ye), max(yp)))
         pad = max(0.15, (hi - lo) * 0.05)
-        ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], "k--", lw=1, alpha=0.6, label="y = x")
+        ax.plot(
+            [lo - pad, hi + pad],
+            [lo - pad, hi + pad],
+            "k--",
+            lw=1,
+            alpha=0.6,
+            label="y = x",
+        )
         for r in loo_rows:
             ax.annotate(
                 str(r["name"])[:14],
@@ -121,14 +210,27 @@ def main() -> None:
     else:
         sub = df.dropna(subset=["pIC50_exp", "pIC50_pred"])
         if len(sub):
-            ax.scatter(sub["pIC50_exp"], sub["pIC50_pred"], s=45, c="#2980b9", edgecolors="k", linewidths=0.4)
+            ax.scatter(
+                sub["pIC50_exp"],
+                sub["pIC50_pred"],
+                s=45,
+                c="#2980b9",
+                edgecolors="k",
+                linewidths=0.4,
+            )
             lo = float(min(sub["pIC50_exp"].min(), sub["pIC50_pred"].min()))
             hi = float(max(sub["pIC50_exp"].max(), sub["pIC50_pred"].max()))
             ax.plot([lo, hi], [lo, hi], "k--", lw=1, alpha=0.6)
             ax.set_xlabel("Experimental pIC50")
             ax.set_ylabel("Predicted pIC50")
         else:
-            ax.text(0.5, 0.5, "No LOO table / experimental overlap", ha="center", transform=ax.transAxes)
+            ax.text(
+                0.5,
+                0.5,
+                "No LOO table / experimental overlap",
+                ha="center",
+                transform=ax.transAxes,
+            )
     ax.set_title("Experimental vs LOO-predicted pIC50")
     plot_scatter.parent.mkdir(parents=True, exist_ok=True)
     fig.tight_layout()
@@ -145,8 +247,12 @@ def main() -> None:
         y_hi = np.asarray(line["y_high"], dtype=float)
         y_mid = 0.5 * (y_lo + y_hi)
         figb, axb = plt.subplots(figsize=(5.5, 4.2))
-        axb.scatter(xbe, ypi, s=52, c="#2980b9", edgecolors="k", linewidths=0.4, zorder=3)
-        axb.fill_between(xg, y_lo, y_hi, color="#3498db", alpha=0.25, label="OLS mean 95% CI")
+        axb.scatter(
+            xbe, ypi, s=52, c="#2980b9", edgecolors="k", linewidths=0.4, zorder=3
+        )
+        axb.fill_between(
+            xg, y_lo, y_hi, color="#3498db", alpha=0.25, label="OLS mean 95% CI"
+        )
         axb.plot(xg, y_mid, "-", color="#2980b9", lw=1.4, label="OLS fit")
         axb.set_xlabel(f"Descriptor ({rank_label})")
         axb.set_ylabel("Experimental pIC50 (training)")
@@ -175,17 +281,24 @@ def main() -> None:
         ax2.barh(names[::-1], vals[::-1], color="#27ae60")
         ax2.set_title(f"Feature importance ({metrics.get('selected_model', '')})")
     else:
-        ax2.text(0.5, 0.5, "No coefficients / importance (fallback ranking or split model)", ha="center")
+        ax2.text(
+            0.5,
+            0.5,
+            "No coefficients / importance (fallback ranking or split model)",
+            ha="center",
+        )
     fig2.tight_layout()
     fig2.savefig(plot_imp, dpi=150)
     plt.close(fig2)
 
     pred_ok = df["pIC50_pred"].notna()
-    best = df.loc[df.loc[pred_ok, "pIC50_pred"].idxmax()] if pred_ok.any() else df.iloc[0]
+    best = (
+        df.loc[df.loc[pred_ok, "pIC50_pred"].idxmax()] if pred_ok.any() else df.iloc[0]
+    )
 
     pose_path = _glob_first(pose_glob, base)
     viewer_html = (
-        "<p class=\"note\">No docked pose found for py3Dmol. Set paths.pose_glob in config.yaml "
+        '<p class="note">No docked pose found for py3Dmol. Set paths.pose_glob in config.yaml '
         f"(default: {html.escape(pose_glob)}).</p>"
     )
     if pose_path and pose_path.is_file():
@@ -198,12 +311,12 @@ def main() -> None:
             v.setStyle({"model": 0}, {"stick": {"radius": 0.18}})
             v.zoomTo()
             viewer_html = (
-                f"<p class=\"note\">Example pose (glob match): {pose_path.name}. "
+                f'<p class="note">Example pose (glob match): {pose_path.name}. '
                 f"Highest predicted pIC50 in table: <b>{best['name']}</b>.</p>"
                 + v.write_html()
             )
         except Exception as exc:
-            viewer_html = f"<p class=\"note\">py3Dmol viewer skipped: {exc}</p>"
+            viewer_html = f'<p class="note">py3Dmol viewer skipped: {exc}</p>'
 
     scatter_b64 = base64.b64encode(plot_scatter.read_bytes()).decode("ascii")
     imp_b64 = base64.b64encode(plot_imp.read_bytes()).decode("ascii")

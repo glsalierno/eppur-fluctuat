@@ -27,13 +27,17 @@ for p in (_ROOT, _V2):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-from screen_alkyl_phosphates import (  # noqa: E402
+from ache_vina_screening import (  # noqa: E402
     DEFAULT_BOX,
     DEFAULT_PDB,
     run_screening,
     safe_name,
-    write_docking_report_html,
 )
+
+try:
+    from screen_alkyl_phosphates import write_docking_report_html
+except ImportError:  # optional legacy helper
+    write_docking_report_html = None
 
 try:
     from interaction_analysis import prepare_and_analyze
@@ -95,6 +99,7 @@ def main() -> None:
         args.n_poses,
         args.vina_cpu,
         args.center,
+        seed=int(os.environ.get("VINA_SEED", "42")),
     )
     df = _merge_cas(df, args.ligands)
 
@@ -124,9 +129,11 @@ def main() -> None:
             print(f"Top pose: {dst}", flush=True)
 
     simple = work / "docking_report_simple.html"
-    if pose_paths:
+    if pose_paths and write_docking_report_html is not None:
         write_docking_report_html(clean_pdb, pose_paths, simple, df)
         print(f"Simple multi-ligand view: {simple}", flush=True)
+    elif pose_paths:
+        print("Optional: add screen_alkyl_phosphates.write_docking_report_html for simple HTML.", flush=True)
 
     if (
         args.skip_interactions

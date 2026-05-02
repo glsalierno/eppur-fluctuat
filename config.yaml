@@ -1,33 +1,51 @@
 # eppur-fluctuat — generic protein–ligand screening + small-data QSAR
 # Paths are relative to this file unless absolute.
+# Data layout: workspace/inputs (user data), workspace/outputs (results), var/ (logs, cache, temp).
 
 project:
   name: "eppur-fluctuat"
   report_title: "Protein–ligand screening report"
 
 protein:
-  pdb_file: "data/protein.pdb"
+  pdb_file: "workspace/inputs/protein.pdb"
   chain: "A"
-  # Binding site: explicit [x, y, z] in Å, or "auto" (centroid of Cα atoms on `chain`)
   pocket_center: "auto"
   pocket_size: [20, 20, 20]
-  # Optional: center box on a co-crystallized ligand (residue name, e.g. donepezil "E20" in some PDBs)
   reference_ligand_resname: null
 
 docking:
   exhaustiveness: 8
   num_modes: 9
-  # energy_range: reserved for engines that expose it; Vina Python API docking() uses defaults here.
   energy_range: 3
-  # AutoDock Vina (Python API) is CPU-only; this flag is reserved for future GPU backends.
   gpu: true
   seed: 42
-  cpu: 0  # 0 = use all available cores
+  cpu: 0
+
+# NVIDIA ALCHEMI Toolkit (optional): FIRE2 geometry steps with Demo MLIP after Vina.
+# Binding scores are always re-evaluated with Vina on the refined ligand pose.
+alchemi:
+  enabled: true
+  fire2_steps: 25
+  fire2_dt: 0.02
+  device: "auto"  # auto | cpu | cuda
+  # DemoModel is for integration testing only; for production swap in a validated MLIP.
+  use_demo_potential: true
+  # After FIRE2, Open Babel can emit a second PDBQT "molecule" (e.g. stray H) for P/S-rich
+  # ligands; Vina then errors on a second ROOT. Truncation keeps the first ligand tree only.
+  rescore_fix_multimolecule_pdbqt: true
+  # Optional: RDKit largest fragment + strip explicit H before PDBQT (if truncate alone fails).
+  rescore_rdkit_largest_fragment: false
+  # Optional: Open Babel rigid ligand PDBQT (-xr) after cleanup; simpler tree for Vina score().
+  rescore_rigid_pdbqt: false
+
+# Stochastic uncertainty: run multiple Vina seeds and aggregate (mean / std of best pose score).
+uncertainty:
+  n_seeds: 3
+  base_seed: 42
 
 qsar:
   fallback_to_ranking: true
   fallback_loo_r2_threshold: 0.2
-  # Logical names; mapped to CSV columns (e.g. binding_energy → binding_energy_kcal_mol)
   use_descriptors:
     - binding_energy
   allow_second_descriptor: false
@@ -39,18 +57,21 @@ qsar:
   test_size: 0
 
 paths:
-  ligands: "data/ligands.csv"
-  docking_results: "outputs/docking_results.csv"
-  computed_features: "outputs/computed_features.csv"
-  curated_pIC50: "data/curated_pIC50.csv"
-  predictions: "outputs/predictions.csv"
-  model_dir: "outputs"
-  report_html: "outputs/qsar_report.html"
-  plot_scatter: "outputs/model_performance.png"
-  plot_importance: "outputs/feature_importance.png"
-  plot_be_vs_pic50: "outputs/be_vs_pic50.png"
-  loo_table: "outputs/loo_predictions.csv"
-  receptor_clean: "outputs/receptor_clean.pdb"
-  receptor_pdbqt: "outputs/receptor.pdbqt"
-  # Glob (relative to project root) for an example docked ligand in HTML report
-  pose_glob: "outputs/docked/*_best.pdbqt"
+  ligands: "workspace/inputs/ligands.csv"
+  docking_results: "workspace/outputs/docking_results.csv"
+  computed_features: "workspace/outputs/computed_features.csv"
+  curated_pIC50: "workspace/inputs/curated_pIC50.csv"
+  predictions: "workspace/outputs/predictions.csv"
+  model_dir: "workspace/outputs"
+  report_html: "workspace/outputs/qsar_report.html"
+  plot_scatter: "workspace/outputs/model_performance.png"
+  plot_importance: "workspace/outputs/feature_importance.png"
+  plot_be_vs_pic50: "workspace/outputs/be_vs_pic50.png"
+  loo_table: "workspace/outputs/loo_predictions.csv"
+  receptor_clean: "workspace/outputs/receptor_clean.pdb"
+  receptor_pdbqt: "workspace/outputs/receptor.pdbqt"
+  pose_glob: "workspace/outputs/docked/*_best.pdbqt"
+  docked_dir: "workspace/outputs/docked"
+  logs_dir: "var/logs"
+  cache_dir: "var/cache"
+  tmp_dir: "var/tmp"

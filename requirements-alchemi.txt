@@ -1,0 +1,6 @@
+# Optional: NVIDIA ALCHEMI Toolkit stack for scripts/dock_ligands_alchemi.py and scripts/alchemi_refine.py
+# Install after core requirements: pip install -r requirements.txt && pip install -r requirements-alchemi.txt
+nvalchemi-toolkit>=0.1.0
+nvalchemi-toolkit-ops>=0.1.0
+torch>=2.0
+ase>=3.22

@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+title: "eppur-fluctuat: protein-ligand docking and small-data QSAR"
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - family-names: Salierno
+    given-names: G. L.
+license: MIT
+repository-code: "https://github.com/glsalierno/eppur-fluctuat"
+version: 1.0.0
+date-released: "2026-05-01"
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.XXXXXXX
+    description: "Replace with Zenodo DOI after archiving"
