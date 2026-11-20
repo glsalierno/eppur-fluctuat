@@ -1,3 +1,3 @@
 name,smiles,affinity_kcal_mol,pose_pdbqt,error,cas
-Triphenyl_phosphate,c1ccc(OP(=O)(Oc2ccccc2)Oc2ccccc2)cc1,-9.553,/home/gabriel/projects/proteina_complexa/AChE_screening_v2/docked/Triphenyl_phosphate_best.pdbqt,,115-86-6
-Dichlorvos,COP(=O)(OC)/C(Cl)=C/Cl,-4.99,/home/gabriel/projects/proteina_complexa/AChE_screening_v2/docked/Dichlorvos_best.pdbqt,,62-73-7
+Triphenyl_phosphate,c1ccc(OP(=O)(Oc2ccccc2)Oc2ccccc2)cc1,-9.553,docked/Triphenyl_phosphate_best.pdbqt,,115-86-6
+Dichlorvos,COP(=O)(OC)/C(Cl)=C/Cl,-4.99,docked/Dichlorvos_best.pdbqt,,62-73-7
