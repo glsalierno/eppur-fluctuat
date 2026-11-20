@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPTS.parent.parent  # proteina_complexa
+PROJECT_ROOT = SCRIPTS.parent.parent  # project root
 
 
 def main() -> None:
