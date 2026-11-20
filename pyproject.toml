@@ -9,7 +9,7 @@ description = "Protein–ligand docking (AutoDock Vina) with small-data interpre
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
-authors = [{ name = "G. L. Salierno", email = "placeholder@example.com" }]
+authors = [{ name = "G. L. Salierno" }]
 keywords = ["docking", "vina", "qsar", "cheminformatics"]
 classifiers = [
   "Development Status :: 4 - Beta",
