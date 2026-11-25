@@ -18,9 +18,7 @@ def test_prepare_receptor_writes_outputs(tmp_path: Path, tiny_pdb_text: str) -> 
     out_clean = tmp_path / "clean.pdb"
     out_pdbqt = tmp_path / "rec.pdbqt"
 
-    def fake_run(
-        cmd, check=True, capture_output=True, text=True, **_kw
-    ):  # noqa: ARG001
+    def fake_run(cmd, check=True, capture_output=True, text=True, **_kw):  # noqa: ARG001
         assert "obabel" in cmd[0]
         out_idx = cmd.index("-O") + 1
         Path(cmd[out_idx]).parent.mkdir(parents=True, exist_ok=True)
@@ -42,9 +40,7 @@ def test_missing_raw_raises(tmp_path: Path) -> None:
         write_clean_protein_pdb(missing, tmp_path / "c.pdb")
 
 
-def test_main_system_exit_missing_receptor(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_system_exit_missing_receptor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import prepare_protein
 
     cfg = tmp_path / "config.yaml"

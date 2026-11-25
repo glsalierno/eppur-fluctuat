@@ -9,15 +9,11 @@ import pandas as pd
 import pytest
 
 
-def test_run_docking_returns_expected_dict(
-    tmp_path: Path, mock_vina_engine: MagicMock
-) -> None:
+def test_run_docking_returns_expected_dict(tmp_path: Path, mock_vina_engine: MagicMock) -> None:
     from dock_ligands import run_docking
 
     out_pose = tmp_path / "best.pdbqt"
-    result = run_docking(
-        mock_vina_engine, "ligand.pdbqt", exhaustiveness=8, n_poses=9, out_pose=out_pose
-    )
+    result = run_docking(mock_vina_engine, "ligand.pdbqt", exhaustiveness=8, n_poses=9, out_pose=out_pose)
 
     assert result["affinity"] == -7.5
     assert isinstance(result["poses"], list)
@@ -27,9 +23,7 @@ def test_run_docking_returns_expected_dict(
     mock_vina_engine.write_pose.assert_called_once()
 
 
-def test_main_passes_cpu_to_vina_constructor(
-    tmp_project: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_main_passes_cpu_to_vina_constructor(tmp_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     import dock_ligands
 
     cfg = tmp_project / "config.yaml"
@@ -58,19 +52,11 @@ paths:
     )
 
     tiny = "ATOM      1  CA  ALA A   1       0.000   0.000   0.000  1.00  0.00           C\nEND\n"
-    (tmp_project / "workspace" / "inputs" / "protein.pdb").write_text(
-        tiny, encoding="utf-8"
-    )
-    (tmp_project / "workspace" / "outputs" / "receptor_clean.pdb").write_text(
-        tiny, encoding="utf-8"
-    )
-    (tmp_project / "workspace" / "outputs" / "receptor.pdbqt").write_text(
-        "ROOT\nTORSDOF 0\n", encoding="utf-8"
-    )
+    (tmp_project / "workspace" / "inputs" / "protein.pdb").write_text(tiny, encoding="utf-8")
+    (tmp_project / "workspace" / "outputs" / "receptor_clean.pdb").write_text(tiny, encoding="utf-8")
+    (tmp_project / "workspace" / "outputs" / "receptor.pdbqt").write_text("ROOT\nTORSDOF 0\n", encoding="utf-8")
 
-    pd.DataFrame([{"name": "L1", "smiles": "CC"}]).to_csv(
-        tmp_project / "workspace" / "inputs" / "ligands.csv"
-    )
+    pd.DataFrame([{"name": "L1", "smiles": "CC"}]).to_csv(tmp_project / "workspace" / "inputs" / "ligands.csv")
 
     captured: dict = {}
 

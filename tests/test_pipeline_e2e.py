@@ -10,9 +10,7 @@ import pandas as pd
 import pytest
 
 
-def test_e2e_creates_expected_csvs(
-    tmp_project: Path, monkeypatch: pytest.MonkeyPatch, tiny_pdb_text: str
-) -> None:
+def test_e2e_creates_expected_csvs(tmp_project: Path, monkeypatch: pytest.MonkeyPatch, tiny_pdb_text: str) -> None:
     import build_qsar
     import dock_ligands
     import prepare_protein
@@ -52,9 +50,7 @@ paths:
         encoding="utf-8",
     )
 
-    (tmp_project / "workspace" / "inputs" / "protein.pdb").write_text(
-        tiny_pdb_text, encoding="utf-8"
-    )
+    (tmp_project / "workspace" / "inputs" / "protein.pdb").write_text(tiny_pdb_text, encoding="utf-8")
 
     pd.DataFrame(
         [
@@ -75,9 +71,7 @@ paths:
     monkeypatch.chdir(tmp_project)
     monkeypatch.setattr("shutil.which", lambda _: "/fake/obabel")
 
-    def fake_ob_run(
-        cmd, check=True, capture_output=True, text=True, **_kw
-    ):  # noqa: ARG001
+    def fake_ob_run(cmd, check=True, capture_output=True, text=True, **_kw):  # noqa: ARG001
         out_idx = cmd.index("-O") + 1
         Path(cmd[out_idx]).parent.mkdir(parents=True, exist_ok=True)
         Path(cmd[out_idx]).write_text("ROOT\nTORSDOF 0\n", encoding="utf-8")
@@ -121,9 +115,7 @@ paths:
         assert col in pdf.columns
 
 
-def test_e2e_flat_docking_scores_trigger_ranking_fallback(
-    tmp_project: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_e2e_flat_docking_scores_trigger_ranking_fallback(tmp_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Flat docking scores force weak structure–activity mapping; ranking fallback still emits predictions."""
     import build_qsar
 
