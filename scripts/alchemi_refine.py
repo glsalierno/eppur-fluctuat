@@ -57,9 +57,7 @@ def merged_pdb_to_batch(merged_pdb: Path, device: torch.device):
     ag = u.atoms
     pos = torch.as_tensor(ag.positions, dtype=torch.float32, device=device)
     sym = np.array([str(x) if x else "X" for x in ag.elements], dtype=object)
-    nums = torch.as_tensor(
-        _element_atomic_numbers(sym), dtype=torch.long, device=device
-    )
+    nums = torch.as_tensor(_element_atomic_numbers(sym), dtype=torch.long, device=device)
     res = np.char.strip(ag.resnames.astype(str))
     cat_np = np.where(res == "LIG", AtomCategory.GAS.value, AtomCategory.SPECIAL.value)
     atom_categories = torch.as_tensor(cat_np, dtype=torch.long, device=device)
@@ -96,9 +94,7 @@ def write_batch_positions_to_pdb(merged_pdb: Path, batch, out_pdb: Path) -> None
     u = mda.Universe(str(merged_pdb))
     coords = batch.positions.detach().cpu().numpy()
     if coords.shape[0] != u.atoms.n_atoms:
-        raise RuntimeError(
-            f"Atom count mismatch after refinement: pdb={u.atoms.n_atoms} batch={coords.shape[0]}"
-        )
+        raise RuntimeError(f"Atom count mismatch after refinement: pdb={u.atoms.n_atoms} batch={coords.shape[0]}")
     u.atoms.positions = coords
     u.atoms.write(str(out_pdb))
 
@@ -198,9 +194,7 @@ def main() -> None:
     SystemExit
         If ALCHEMI is not installed or arguments are invalid.
     """
-    ap = __import__("argparse").ArgumentParser(
-        description="ALCHEMI FIRE2 refine merged complex PDB"
-    )
+    ap = __import__("argparse").ArgumentParser(description="ALCHEMI FIRE2 refine merged complex PDB")
     ap.add_argument("merged_pdb", type=Path)
     ap.add_argument("out_pdb", type=Path)
     ap.add_argument("--steps", type=int, default=25)

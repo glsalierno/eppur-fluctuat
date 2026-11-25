@@ -26,8 +26,7 @@ def test_apply_implicit_defaults_for_minimal_config(tmp_path: Path) -> None:
 
     p = tmp_path / "mini.yaml"
     p.write_text(
-        "protein:\n  pdb_file: x.pdb\n  chain: A\n  pocket_center: [1,2,3]\n"
-        "docking: {}\npaths: {}\n",
+        "protein:\n  pdb_file: x.pdb\n  chain: A\n  pocket_center: [1,2,3]\n" "docking: {}\npaths: {}\n",
         encoding="utf-8",
     )
     cfg = load_config(p)

@@ -34,9 +34,7 @@ class _NotWaterOrHet(Select):
         return True
 
 
-def obabel_pdb_to_pdbqt(
-    pdb_path: Path, pdbqt_path: Path, rigid_receptor: bool = True
-) -> None:
+def obabel_pdb_to_pdbqt(pdb_path: Path, pdbqt_path: Path, rigid_receptor: bool = True) -> None:
     """
     Convert a PDB file to AutoDock PDBQT using Open Babel.
 
@@ -122,9 +120,7 @@ def main() -> None:
     SystemExit
         On missing input files, missing ``obabel``, or other fatal setup errors.
     """
-    ap = argparse.ArgumentParser(
-        description="Prepare receptor PDB and PDBQT from config.yaml"
-    )
+    ap = argparse.ArgumentParser(description="Prepare receptor PDB and PDBQT from config.yaml")
     ap.add_argument(
         "--config",
         type=Path,
@@ -140,15 +136,11 @@ def main() -> None:
     if not raw.is_file():
         raise SystemExit(f"Receptor PDB not found: {raw}")
 
-    out_clean = base / paths.get(
-        "receptor_clean", "workspace/outputs/receptor_clean.pdb"
-    )
+    out_clean = base / paths.get("receptor_clean", "workspace/outputs/receptor_clean.pdb")
     out_pdbqt = base / paths.get("receptor_pdbqt", "workspace/outputs/receptor.pdbqt")
 
     if shutil.which("obabel") is None:
-        raise SystemExit(
-            "Open Babel 'obabel' not found in PATH (conda install -c conda-forge openbabel)."
-        )
+        raise SystemExit("Open Babel 'obabel' not found in PATH (conda install -c conda-forge openbabel).")
 
     prepare_receptor_for_vina(raw, out_clean, out_pdbqt)
     print(f"Wrote {out_clean}")

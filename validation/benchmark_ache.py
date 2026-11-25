@@ -54,9 +54,7 @@ def load_benchmark_table(csv_path: Path) -> pd.DataFrame:
     return df.sort_values("name").reset_index(drop=True)
 
 
-def synthetic_predicted_pic50(
-    df: pd.DataFrame, noise: float = 0.35, seed: int = 0
-) -> np.ndarray:
+def synthetic_predicted_pic50(df: pd.DataFrame, noise: float = 0.35, seed: int = 0) -> np.ndarray:
     """
     Generate placeholder predictions correlated with experimental pIC50 (for CI / demos).
 
@@ -79,9 +77,7 @@ def synthetic_predicted_pic50(
     return 0.85 * y + 1.1 + rng.normal(0.0, noise, size=len(y))
 
 
-def metrics_binary_accuracy(
-    y_true: np.ndarray, y_pred: np.ndarray, cutoff: float = 7.5
-) -> float:
+def metrics_binary_accuracy(y_true: np.ndarray, y_pred: np.ndarray, cutoff: float = 7.5) -> float:
     """
     Threshold classification accuracy (active if pIC50 >= cutoff).
 

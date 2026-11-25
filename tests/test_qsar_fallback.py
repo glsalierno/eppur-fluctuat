@@ -11,29 +11,13 @@ import pytest
 def test_should_use_ranking_fallback_logic() -> None:
     from build_qsar import should_use_ranking_fallback
 
-    assert (
-        should_use_ranking_fallback(0.01, fallback_enabled=True, fallback_threshold=0.2)
-        is True
-    )
-    assert (
-        should_use_ranking_fallback(0.5, fallback_enabled=True, fallback_threshold=0.2)
-        is False
-    )
-    assert (
-        should_use_ranking_fallback(None, fallback_enabled=True, fallback_threshold=0.2)
-        is False
-    )
-    assert (
-        should_use_ranking_fallback(
-            0.01, fallback_enabled=False, fallback_threshold=0.2
-        )
-        is False
-    )
+    assert should_use_ranking_fallback(0.01, fallback_enabled=True, fallback_threshold=0.2) is True
+    assert should_use_ranking_fallback(0.5, fallback_enabled=True, fallback_threshold=0.2) is False
+    assert should_use_ranking_fallback(None, fallback_enabled=True, fallback_threshold=0.2) is False
+    assert should_use_ranking_fallback(0.01, fallback_enabled=False, fallback_threshold=0.2) is False
 
 
-def test_predictions_same_schema_fallback_vs_ols(
-    tmp_project: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_predictions_same_schema_fallback_vs_ols(tmp_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Fallback and OLS branches must emit the same prediction columns."""
     import build_qsar
 

@@ -123,9 +123,7 @@ def run_one_seed(
     n_poses = int(dock.get("num_modes", 9))
     n_cpu = vina_cpu_count(cfg)
 
-    clean_pdb = base / paths.get(
-        "receptor_clean", "workspace/outputs/receptor_clean.pdb"
-    )
+    clean_pdb = base / paths.get("receptor_clean", "workspace/outputs/receptor_clean.pdb")
     rec_pdbqt = base / paths.get("receptor_pdbqt", "workspace/outputs/receptor.pdbqt")
     if not rec_pdbqt.is_file() or not clean_pdb.is_file():
         raise SystemExit("Missing receptor; run prepare_protein.py first.")
@@ -149,9 +147,7 @@ def run_one_seed(
         tag = safe_name(name)
         lig_pdbqt = dock_dir / f"{tag}_ligand.pdbqt"
         out_pose = dock_dir / f"{tag}_best.pdbqt"
-        out_pose_ref = (
-            dock_dir / f"{tag}_best_alchemi.pdbqt" if use_alchemi else out_pose
-        )
+        out_pose_ref = dock_dir / f"{tag}_best_alchemi.pdbqt" if use_alchemi else out_pose
 
         entry: Dict[str, Any] = {
             "name": name,
@@ -181,11 +177,7 @@ def run_one_seed(
         v.set_ligand_from_file(str(lig_pdbqt))
         v.dock(exhaustiveness=exh, n_poses=n_poses)
         energies = v.energies(n_poses=n_poses)
-        best_dock = (
-            float(np.asarray(energies[0]).flatten()[0])
-            if len(energies)
-            else float("nan")
-        )
+        best_dock = float(np.asarray(energies[0]).flatten()[0]) if len(energies) else float("nan")
         entry["affinity_vina_dock_kcal_mol"] = best_dock
         v.write_pose(str(out_pose), overwrite=True)
 
@@ -215,12 +207,8 @@ def run_one_seed(
                 ligand_pdb_to_vina_pdbqt(
                     lig_ref_pdb,
                     out_pose_ref,
-                    use_rdkit_largest_fragment=bool(
-                        alcfg.get("rescore_rdkit_largest_fragment", False)
-                    ),
-                    fix_multimolecule_pdbqt=bool(
-                        alcfg.get("rescore_fix_multimolecule_pdbqt", True)
-                    ),
+                    use_rdkit_largest_fragment=bool(alcfg.get("rescore_rdkit_largest_fragment", False)),
+                    fix_multimolecule_pdbqt=bool(alcfg.get("rescore_fix_multimolecule_pdbqt", True)),
                     rigid_pdbqt=bool(alcfg.get("rescore_rigid_pdbqt", False)),
                 )
                 v.set_ligand_from_file(str(out_pose_ref))
@@ -229,9 +217,7 @@ def run_one_seed(
                 entry["alchemi_note"] = f"ALCHEMI failed: {exc}"
                 entry["affinity_after_alchemi_kcal_mol"] = float("nan")
         else:
-            entry["affinity_after_alchemi_kcal_mol"] = entry[
-                "affinity_vina_rescore_kcal_mol"
-            ]
+            entry["affinity_after_alchemi_kcal_mol"] = entry["affinity_vina_rescore_kcal_mol"]
 
         rows.append(entry)
 
@@ -249,16 +235,10 @@ def main() -> None:
     ValueError
         If the ligand table is invalid.
     """
-    ap = argparse.ArgumentParser(
-        description="Vina + ALCHEMI FIRE2 refinement (docking v2)"
-    )
+    ap = argparse.ArgumentParser(description="Vina + ALCHEMI FIRE2 refinement (docking v2)")
     ap.add_argument("--config", type=Path, default=_ROOT / "config.yaml")
-    ap.add_argument(
-        "--no-alchemi", action="store_true", help="Vina + merge/rescore only (no FIRE2)"
-    )
-    ap.add_argument(
-        "--seeds", type=int, default=None, help="Override uncertainty.n_seeds"
-    )
+    ap.add_argument("--no-alchemi", action="store_true", help="Vina + merge/rescore only (no FIRE2)")
+    ap.add_argument("--seeds", type=int, default=None, help="Override uncertainty.n_seeds")
     args = ap.parse_args()
 
     cfg = load_config(args.config)
@@ -272,9 +252,7 @@ def main() -> None:
         raise SystemExit("Open Babel 'obabel' not found in PATH.")
 
     lig_path = base / paths.get("ligands", "workspace/inputs/ligands.csv")
-    out_csv = base / paths.get(
-        "docking_results", "workspace/outputs/docking_results_alchemi.csv"
-    )
+    out_csv = base / paths.get("docking_results", "workspace/outputs/docking_results_alchemi.csv")
     dock_dir = base / paths.get("docked_dir", "workspace/outputs/docked_alchemi")
     cache_dir = base / paths.get("cache_dir", "var/cache")
     tmp_dir = base / paths.get("tmp_dir", "var/tmp")
@@ -284,9 +262,7 @@ def main() -> None:
     if not lig_path.is_file():
         raise SystemExit(f"Ligand table not found: {lig_path}")
 
-    clean_pdb = base / paths.get(
-        "receptor_clean", "workspace/outputs/receptor_clean.pdb"
-    )
+    clean_pdb = base / paths.get("receptor_clean", "workspace/outputs/receptor_clean.pdb")
     center = resolve_center(cfg, clean_pdb)
     box = prot.get("pocket_size", [20, 20, 20])
     if isinstance(box, (int, float)):
@@ -299,9 +275,7 @@ def main() -> None:
             file=sys.stderr,
         )
 
-    n_seeds = (
-        int(args.seeds) if args.seeds is not None else int(uncfg.get("n_seeds", 1))
-    )
+    n_seeds = int(args.seeds) if args.seeds is not None else int(uncfg.get("n_seeds", 1))
     base_seed = int(uncfg.get("base_seed", 42))
     seeds = [base_seed + i for i in range(n_seeds)]
 
@@ -311,9 +285,7 @@ def main() -> None:
 
     logf = log_path(cfg, base, "dock_ligands_alchemi")
     with open(logf, "w", encoding="utf-8") as log:
-        log.write(
-            f"center={center} box={box} seeds={seeds} no_alchemi={args.no_alchemi}\n"
-        )
+        log.write(f"center={center} box={box} seeds={seeds} no_alchemi={args.no_alchemi}\n")
 
     all_rows: List[Dict[str, Any]] = []
     for seed in seeds:
@@ -346,9 +318,7 @@ def main() -> None:
         pose_pdbqt_refined=("pose_pdbqt_refined", "first"),
         alchemi_note=("alchemi_note", "first"),
     )
-    g = g.sort_values(
-        "affinity_vina_dock_mean", ascending=True, na_position="last"
-    ).reset_index(drop=True)
+    g = g.sort_values("affinity_vina_dock_mean", ascending=True, na_position="last").reset_index(drop=True)
     g.insert(0, "rank", range(1, len(g) + 1))
 
     out_csv.parent.mkdir(parents=True, exist_ok=True)
