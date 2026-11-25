@@ -120,19 +120,11 @@ def main() -> None:
 
     pred_path = base / paths.get("predictions", "workspace/outputs/predictions.csv")
     metrics_path = base / paths.get("model_dir", "workspace/outputs") / "metrics.json"
-    plot_data_path = (
-        base / paths.get("model_dir", "workspace/outputs") / "plot_data.json"
-    )
+    plot_data_path = base / paths.get("model_dir", "workspace/outputs") / "plot_data.json"
     out_html = base / paths.get("report_html", "workspace/outputs/qsar_report.html")
-    plot_scatter = base / paths.get(
-        "plot_scatter", "workspace/outputs/model_performance.png"
-    )
-    plot_imp = base / paths.get(
-        "plot_importance", "workspace/outputs/feature_importance.png"
-    )
-    plot_be_path = base / paths.get(
-        "plot_be_vs_pic50", "workspace/outputs/be_vs_pic50.png"
-    )
+    plot_scatter = base / paths.get("plot_scatter", "workspace/outputs/model_performance.png")
+    plot_imp = base / paths.get("plot_importance", "workspace/outputs/feature_importance.png")
+    plot_be_path = base / paths.get("plot_be_vs_pic50", "workspace/outputs/be_vs_pic50.png")
     pose_glob = paths.get("pose_glob", "workspace/outputs/docked/*_best.pdbqt")
 
     df = pd.read_csv(pred_path)
@@ -146,15 +138,8 @@ def main() -> None:
     rank_label = str(plot_payload.get("rank_column") or "binding_energy_kcal_mol")
 
     loo_rows = plot_payload.get("loo") if plot_payload else None
-    if (
-        not loo_rows
-        and (
-            base / paths.get("loo_table", "workspace/outputs/loo_predictions.csv")
-        ).is_file()
-    ):
-        loo_df = pd.read_csv(
-            base / paths.get("loo_table", "workspace/outputs/loo_predictions.csv")
-        )
+    if not loo_rows and (base / paths.get("loo_table", "workspace/outputs/loo_predictions.csv")).is_file():
+        loo_df = pd.read_csv(base / paths.get("loo_table", "workspace/outputs/loo_predictions.csv"))
         loo_rows = loo_df.to_dict("records")
 
     fig, ax = plt.subplots(figsize=(5.5, 5))
@@ -247,12 +232,8 @@ def main() -> None:
         y_hi = np.asarray(line["y_high"], dtype=float)
         y_mid = 0.5 * (y_lo + y_hi)
         figb, axb = plt.subplots(figsize=(5.5, 4.2))
-        axb.scatter(
-            xbe, ypi, s=52, c="#2980b9", edgecolors="k", linewidths=0.4, zorder=3
-        )
-        axb.fill_between(
-            xg, y_lo, y_hi, color="#3498db", alpha=0.25, label="OLS mean 95% CI"
-        )
+        axb.scatter(xbe, ypi, s=52, c="#2980b9", edgecolors="k", linewidths=0.4, zorder=3)
+        axb.fill_between(xg, y_lo, y_hi, color="#3498db", alpha=0.25, label="OLS mean 95% CI")
         axb.plot(xg, y_mid, "-", color="#2980b9", lw=1.4, label="OLS fit")
         axb.set_xlabel(f"Descriptor ({rank_label})")
         axb.set_ylabel("Experimental pIC50 (training)")
@@ -292,9 +273,7 @@ def main() -> None:
     plt.close(fig2)
 
     pred_ok = df["pIC50_pred"].notna()
-    best = (
-        df.loc[df.loc[pred_ok, "pIC50_pred"].idxmax()] if pred_ok.any() else df.iloc[0]
-    )
+    best = df.loc[df.loc[pred_ok, "pIC50_pred"].idxmax()] if pred_ok.any() else df.iloc[0]
 
     pose_path = _glob_first(pose_glob, base)
     viewer_html = (
@@ -312,8 +291,7 @@ def main() -> None:
             v.zoomTo()
             viewer_html = (
                 f'<p class="note">Example pose (glob match): {pose_path.name}. '
-                f"Highest predicted pIC50 in table: <b>{best['name']}</b>.</p>"
-                + v.write_html()
+                f"Highest predicted pIC50 in table: <b>{best['name']}</b>.</p>" + v.write_html()
             )
         except Exception as exc:
             viewer_html = f'<p class="note">py3Dmol viewer skipped: {exc}</p>'

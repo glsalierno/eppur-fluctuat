@@ -139,9 +139,7 @@ def ca_centroid_chain(pdb_path: Path, chain_id: str) -> Optional[np.ndarray]:
     return np.mean(np.array(coords), axis=0)
 
 
-def reference_ligand_centroid(
-    pdb_path: Path, chain_id: str, resname: str
-) -> Optional[np.ndarray]:
+def reference_ligand_centroid(pdb_path: Path, chain_id: str, resname: str) -> Optional[np.ndarray]:
     """
     Centroid of heavy atoms for a hetero residue name (co-crystallized ligand).
 
@@ -218,13 +216,9 @@ def resolve_center(cfg: dict, clean_pdb: Path) -> Tuple[float, float, float]:
     if pc == "auto" or pc is None:
         cen = ca_centroid_chain(clean_pdb, chain)
         if cen is None:
-            raise RuntimeError(
-                f"Could not compute automatic pocket center for chain {chain}."
-            )
+            raise RuntimeError(f"Could not compute automatic pocket center for chain {chain}.")
         return float(cen[0]), float(cen[1]), float(cen[2])
-    raise ValueError(
-        "protein.pocket_center must be 'auto', [x,y,z], or set reference_ligand_resname"
-    )
+    raise ValueError("protein.pocket_center must be 'auto', [x,y,z], or set reference_ligand_resname")
 
 
 def vina_cpu_count(cfg: dict) -> int:

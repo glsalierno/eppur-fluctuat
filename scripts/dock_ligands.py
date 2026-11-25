@@ -85,9 +85,7 @@ def run_docking(
     vina_engine.set_ligand_from_file(ligand_pdbqt)
     vina_engine.dock(exhaustiveness=exhaustiveness, n_poses=n_poses)
     energies = vina_engine.energies(n_poses=n_poses)
-    best = (
-        float(np.asarray(energies[0]).flatten()[0]) if len(energies) else float("nan")
-    )
+    best = float(np.asarray(energies[0]).flatten()[0]) if len(energies) else float("nan")
     vina_engine.write_pose(str(out_pose), overwrite=True)
     return {
         "affinity": best,
@@ -107,9 +105,7 @@ def main() -> None:
     ValueError
         If the ligands CSV lacks required columns.
     """
-    ap = argparse.ArgumentParser(
-        description="Dock ligands with AutoDock Vina using config.yaml"
-    )
+    ap = argparse.ArgumentParser(description="Dock ligands with AutoDock Vina using config.yaml")
     ap.add_argument(
         "--config",
         type=Path,
@@ -126,13 +122,9 @@ def main() -> None:
         raise SystemExit("Open Babel 'obabel' not found in PATH.")
 
     lig_path = base / paths.get("ligands", "workspace/inputs/ligands.csv")
-    clean_pdb = base / paths.get(
-        "receptor_clean", "workspace/outputs/receptor_clean.pdb"
-    )
+    clean_pdb = base / paths.get("receptor_clean", "workspace/outputs/receptor_clean.pdb")
     rec_pdbqt = base / paths.get("receptor_pdbqt", "workspace/outputs/receptor.pdbqt")
-    out_csv = base / paths.get(
-        "docking_results", "workspace/outputs/docking_results.csv"
-    )
+    out_csv = base / paths.get("docking_results", "workspace/outputs/docking_results.csv")
 
     if not rec_pdbqt.is_file() or not clean_pdb.is_file():
         raise SystemExit(
@@ -158,9 +150,7 @@ def main() -> None:
             file=sys.stderr,
         )
 
-    print(
-        f"Box center (Å): {center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f}", flush=True
-    )
+    print(f"Box center (Å): {center[0]:.3f}, {center[1]:.3f}, {center[2]:.3f}", flush=True)
     print(f"Box size (Å): {box}", flush=True)
 
     lig_df = pd.read_csv(lig_path)
@@ -209,9 +199,7 @@ def main() -> None:
         )
 
     df = pd.DataFrame(rows)
-    df = df.sort_values(
-        "affinity_kcal_mol", ascending=True, na_position="last"
-    ).reset_index(drop=True)
+    df = df.sort_values("affinity_kcal_mol", ascending=True, na_position="last").reset_index(drop=True)
     df.insert(0, "rank", range(1, len(df) + 1))
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(out_csv, index=False)

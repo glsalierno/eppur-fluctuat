@@ -83,9 +83,7 @@ def main() -> None:
     cfg = load_config(args.config)
     base = args.config.resolve().parent
     paths = cfg.get("paths", {})
-    feat_path = base / paths.get(
-        "computed_features", "workspace/outputs/computed_features.csv"
-    )
+    feat_path = base / paths.get("computed_features", "workspace/outputs/computed_features.csv")
     pic_path = base / paths.get("curated_pIC50", "workspace/inputs/curated_pIC50.csv")
     out_dir = base / paths.get("model_dir", "workspace/outputs")
     pack = joblib.load(out_dir / "model.joblib")
@@ -100,11 +98,7 @@ def main() -> None:
         exp = pd.read_csv(pic_path)
         exp["name"] = exp["name"].astype(str).map(norm_name)
         pic_map = exp.set_index("name")["pIC50"].to_dict()
-        ic50_map = (
-            exp.set_index("name")["ic50_nM"].to_dict()
-            if "ic50_nM" in exp.columns
-            else {}
-        )
+        ic50_map = exp.set_index("name")["ic50_nM"].to_dict() if "ic50_nM" in exp.columns else {}
         merged["pIC50_exp"] = merged["name"].map(pic_map)
         merged["ic50_nM_exp"] = merged["name"].map(ic50_map) if ic50_map else np.nan
         merged["has_experimental"] = merged["pIC50_exp"].notna()
@@ -114,24 +108,16 @@ def main() -> None:
         merged["has_experimental"] = False
 
     for c in cols:
-        merged[c] = (
-            merged[c].replace([np.inf, -np.inf], np.nan).fillna(merged[c].median())
-        )
+        merged[c] = merged[c].replace([np.inf, -np.inf], np.nan).fillna(merged[c].median())
 
     train_mask = merged["has_experimental"]
-    y_mean = (
-        float(merged.loc[train_mask, "pIC50_exp"].mean())
-        if train_mask.any()
-        else float("nan")
-    )
+    y_mean = float(merged.loc[train_mask, "pIC50_exp"].mean()) if train_mask.any() else float("nan")
 
     merged["prediction_source"] = ""
     merged["pIC50_pred"] = np.nan
     merged["IC50_nM_pred"] = np.nan
     if rank_col in merged.columns:
-        merged["rank_by_binding_energy"] = merged[rank_col].rank(
-            ascending=True, method="min"
-        )
+        merged["rank_by_binding_energy"] = merged[rank_col].rank(ascending=True, method="min")
     else:
         merged["rank_by_binding_energy"] = np.nan
 
@@ -142,11 +128,7 @@ def main() -> None:
             Xr = row[cols].values.astype(float).reshape(1, -1)
             nm = row["name"]
             if mode == "split":
-                if (
-                    nm in covalent_names
-                    and pack.get("covalent")
-                    and pack["covalent"].get("model")
-                ):
+                if nm in covalent_names and pack.get("covalent") and pack["covalent"].get("model"):
                     p = float(pack["covalent"]["model"].predict(Xr)[0])
                     src = "covalent_univariate"
                 elif pack.get("non_covalent") and pack["non_covalent"].get("model"):

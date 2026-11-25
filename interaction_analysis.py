@@ -185,12 +185,8 @@ class InteractionResult:
     pipi_pairs: List[str]
     # For visualization: H-bond (H pos, A pos) in Å
     hbond_cylinders: List[Tuple[np.ndarray, np.ndarray]]
-    active_site_residue_ids: List[
-        int
-    ]  # protein resid for binding-site shell (around ligand)
-    pocket_residue_ids: List[int] = field(
-        default_factory=list
-    )  # all protein resids within pocket_radius (Å)
+    active_site_residue_ids: List[int]  # protein resid for binding-site shell (around ligand)
+    pocket_residue_ids: List[int] = field(default_factory=list)  # all protein resids within pocket_radius (Å)
     merged_complex_pdb: Path = field(default_factory=lambda: Path("."))
 
 
@@ -303,9 +299,7 @@ def _count_pipi(
     return count, pairs
 
 
-def _hydrophobic_contacts(
-    u: mda.Universe, lig_sel: str, cutoff: float = 4.0
-) -> Tuple[int, List[str]]:
+def _hydrophobic_contacts(u: mda.Universe, lig_sel: str, cutoff: float = 4.0) -> Tuple[int, List[str]]:
     lig = u.select_atoms(lig_sel + " and not name H*")
     shell = u.select_atoms(f"protein and around {cutoff} group ligand", ligand=lig)
     seen: Set[str] = set()
@@ -511,13 +505,9 @@ def analyze_complex(
     n_pi, pi_pairs = _count_pipi(u, lig_pdb_for_rdkit)
 
     lig = u.select_atoms(lig_sel)
-    site = u.select_atoms(
-        f"protein and around {active_site_radius} group ligand", ligand=lig
-    )
+    site = u.select_atoms(f"protein and around {active_site_radius} group ligand", ligand=lig)
     active_ids = sorted({int(r.resid) for r in site.residues})
-    pocket_shell = u.select_atoms(
-        f"protein and around {pocket_radius} group ligand", ligand=lig
-    )
+    pocket_shell = u.select_atoms(f"protein and around {pocket_radius} group ligand", ligand=lig)
     pocket_ids = sorted({int(r.resid) for r in pocket_shell.residues})
 
     return InteractionResult(

@@ -113,14 +113,10 @@ def ensure_computed_features(cfg: dict, base: Path, paths: dict) -> Path:
     SystemExit
         If required inputs are missing or docking lacks ``affinity_kcal_mol``.
     """
-    out_path = base / paths.get(
-        "computed_features", "workspace/outputs/computed_features.csv"
-    )
+    out_path = base / paths.get("computed_features", "workspace/outputs/computed_features.csv")
     if out_path.is_file():
         return out_path
-    dock_path = base / paths.get(
-        "docking_results", "workspace/outputs/docking_results.csv"
-    )
+    dock_path = base / paths.get("docking_results", "workspace/outputs/docking_results.csv")
     lig_path = base / paths.get("ligands", "workspace/inputs/ligands.csv")
     if not dock_path.is_file() or not lig_path.is_file():
         raise SystemExit(
@@ -140,9 +136,7 @@ def ensure_computed_features(cfg: dict, base: Path, paths: dict) -> Path:
         raise SystemExit("docking_results.csv must contain affinity_kcal_mol")
     m["binding_energy_kcal_mol"] = m["affinity_kcal_mol"]
     if "covalent_proximity_distance" in m.columns:
-        m["covalent_factor"] = (
-            pd.to_numeric(m["covalent_proximity_distance"], errors="coerce") < 3.5
-        ).astype(int)
+        m["covalent_factor"] = (pd.to_numeric(m["covalent_proximity_distance"], errors="coerce") < 3.5).astype(int)
     elif "covalent_factor" not in m.columns:
         m["covalent_factor"] = 0
     keep = ["name", "smiles", "binding_energy_kcal_mol", "covalent_factor"]
@@ -286,9 +280,7 @@ def main() -> None:
     exp = exp.dropna(subset=["pIC50", "name"])
     exp["name"] = exp["name"].map(norm_name)
     pic_map = exp.set_index("name")["pIC50"].to_dict()
-    ic50_map = (
-        exp.set_index("name")["ic50_nM"].to_dict() if "ic50_nM" in exp.columns else {}
-    )
+    ic50_map = exp.set_index("name")["ic50_nM"].to_dict() if "ic50_nM" in exp.columns else {}
 
     merged = feats.copy()
     merged["name"] = merged["name"].map(norm_name)
@@ -296,28 +288,18 @@ def main() -> None:
     merged["ic50_nM_exp"] = merged["name"].map(ic50_map) if ic50_map else np.nan
     merged["has_experimental"] = merged["pIC50_exp"].notna()
 
-    test_names: Set[str] = {
-        norm_name(x) for x in (qsar.get("test_set_compounds") or [])
-    }
-    covalent_names: Set[str] = {
-        norm_name(x) for x in (qsar.get("covalent_group") or [])
-    }
+    test_names: Set[str] = {norm_name(x) for x in (qsar.get("test_set_compounds") or [])}
+    covalent_names: Set[str] = {norm_name(x) for x in (qsar.get("covalent_group") or [])}
 
     logical = list(qsar.get("use_descriptors") or ["binding_energy"])
     resolved = resolve_descriptor_columns(logical)
 
     n_exp = int(merged["has_experimental"].sum())
     if n_exp < int(qsar.get("min_train_samples", 3)):
-        raise SystemExit(
-            f"Need at least {qsar.get('min_train_samples', 3)} compounds with experimental pIC50."
-        )
+        raise SystemExit(f"Need at least {qsar.get('min_train_samples', 3)} compounds with experimental pIC50.")
 
-    train_df = merged[
-        merged["has_experimental"] & ~merged["name"].isin(test_names)
-    ].copy()
-    test_df = merged[
-        merged["has_experimental"] & merged["name"].isin(test_names)
-    ].copy()
+    train_df = merged[merged["has_experimental"] & ~merged["name"].isin(test_names)].copy()
+    test_df = merged[merged["has_experimental"] & merged["name"].isin(test_names)].copy()
     train_df = train_df.reset_index(drop=True)
 
     if len(train_df) < 2 and len(test_df) > 0:
@@ -329,9 +311,7 @@ def main() -> None:
     feat_cols: List[str] = []
     for c in resolved:
         if c not in merged.columns:
-            raise SystemExit(
-                f"Descriptor column '{c}' not in computed features ({feat_path})."
-            )
+            raise SystemExit(f"Descriptor column '{c}' not in computed features ({feat_path}).")
         feat_cols.append(c)
     if not feat_cols:
         feat_cols = ["binding_energy_kcal_mol"]
@@ -347,12 +327,8 @@ def main() -> None:
     rank_col = ranking_column_for_qsar(feat_cols)
 
     for c in feat_cols:
-        merged[c] = (
-            merged[c].replace([np.inf, -np.inf], np.nan).fillna(merged[c].median())
-        )
-        train_df[c] = (
-            train_df[c].replace([np.inf, -np.inf], np.nan).fillna(train_df[c].median())
-        )
+        merged[c] = merged[c].replace([np.inf, -np.inf], np.nan).fillna(merged[c].median())
+        train_df[c] = train_df[c].replace([np.inf, -np.inf], np.nan).fillna(train_df[c].median())
 
     X_train = train_df[feat_cols].values.astype(float)
     y_train = train_df["pIC50_exp"].values.astype(float)
@@ -409,12 +385,7 @@ def main() -> None:
             pack[key] = {"model": lr_f, "n": len(sub_df)}
             metrics[f"{key}_loo_n"] = len(sub_df)
         ym = float(y_train.mean())
-        pred_loo = np.array(
-            [
-                loo_by_name.get(str(train_df.iloc[j]["name"]), ym)
-                for j in range(len(train_df))
-            ]
-        )
+        pred_loo = np.array([loo_by_name.get(str(train_df.iloc[j]["name"]), ym) for j in range(len(train_df))])
         y_loo_all = pred_loo.tolist()
         y_true_all = y_train.tolist()
         if len(y_true_all) >= 2:
@@ -433,9 +404,7 @@ def main() -> None:
 
         pack["covalent"] = (
             {
-                "model": fit_lr(
-                    cov_df[feat_cols].values.astype(float), cov_df["pIC50_exp"].values
-                ),
+                "model": fit_lr(cov_df[feat_cols].values.astype(float), cov_df["pIC50_exp"].values),
                 "n": len(cov_df),
             }
             if len(cov_df) >= 2
@@ -443,9 +412,7 @@ def main() -> None:
         )
         pack["non_covalent"] = (
             {
-                "model": fit_lr(
-                    non_df[feat_cols].values.astype(float), non_df["pIC50_exp"].values
-                ),
+                "model": fit_lr(non_df[feat_cols].values.astype(float), non_df["pIC50_exp"].values),
                 "n": len(non_df),
             }
             if len(non_df) >= 2
@@ -493,11 +460,7 @@ def main() -> None:
             for _, row in test_df.iterrows():
                 nm = row["name"]
                 Xr = row[feat_cols].values.astype(float).reshape(1, -1)
-                if (
-                    nm in covalent_names
-                    and pack.get("covalent")
-                    and pack["covalent"].get("model")
-                ):
+                if nm in covalent_names and pack.get("covalent") and pack["covalent"].get("model"):
                     y_hat.append(float(pack["covalent"]["model"].predict(Xr)[0]))
                 elif pack.get("non_covalent") and pack["non_covalent"].get("model"):
                     y_hat.append(float(pack["non_covalent"]["model"].predict(Xr)[0]))
@@ -508,9 +471,7 @@ def main() -> None:
             y_hat = np.array(y_hat)
         else:
             y_hat = pack["global"]["model"].predict(X_te)
-        metrics["test_r2"] = (
-            float(r2_score(y_te, y_hat)) if len(y_te) >= 2 else float("nan")
-        )
+        metrics["test_r2"] = float(r2_score(y_te, y_hat)) if len(y_te) >= 2 else float("nan")
         metrics["test_rmse"] = float(np.sqrt(mean_squared_error(y_te, y_hat)))
         metrics["test_predictions"] = [
             {
@@ -531,17 +492,13 @@ def main() -> None:
     )
     metrics["fallback_ranking"] = bool(use_fallback)
     metrics["fallback_reason"] = (
-        f"LOO R² ({metrics.get('loo_r2')}) < threshold {fallback_thr}"
-        if use_fallback
-        else None
+        f"LOO R² ({metrics.get('loo_r2')}) < threshold {fallback_thr}" if use_fallback else None
     )
 
     merged["prediction_source"] = ""
     merged["pIC50_pred"] = np.nan
     merged["IC50_nM_pred"] = np.nan
-    merged["rank_by_binding_energy"] = merged[rank_col].rank(
-        ascending=True, method="min"
-    )
+    merged["rank_by_binding_energy"] = merged[rank_col].rank(ascending=True, method="min")
 
     if use_fallback:
         print(
@@ -555,19 +512,13 @@ def main() -> None:
         metrics["selected_model"] = "OLS (LOO validation)"
         if pack.get("mode") == "single" and pack.get("global"):
             lr_g = pack["global"]["model"]
-            metrics["ols_coefficients"] = {
-                c: float(lr_g.coef_[i]) for i, c in enumerate(feat_cols)
-            }
+            metrics["ols_coefficients"] = {c: float(lr_g.coef_[i]) for i, c in enumerate(feat_cols)}
             metrics["ols_intercept"] = float(lr_g.intercept_)
         for idx, row in merged.iterrows():
             Xr = row[feat_cols].values.astype(float).reshape(1, -1)
             nm = row["name"]
             if pred_fn == "split":
-                if (
-                    nm in covalent_names
-                    and pack.get("covalent")
-                    and pack["covalent"].get("model")
-                ):
+                if nm in covalent_names and pack.get("covalent") and pack["covalent"].get("model"):
                     p = float(pack["covalent"]["model"].predict(Xr)[0])
                     src = "covalent_univariate"
                 elif pack.get("non_covalent") and pack["non_covalent"].get("model"):
